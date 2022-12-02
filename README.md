@@ -14,6 +14,52 @@ Install this package using the usual suspects.
 pip install schemamodel
 ```
 
+## Usage
+
+Assuming you have a JSON schema like:
+
+```json
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "fake-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "default": 5,
+              "type": "integer"
+            },
+            "brand_name": {
+              "type": "string"
+            }
+        }
+    }
+```
+
+```python
+from schemamodel import SchemaModelFactory
+
+
+factory = SchemaModelFactory()
+
+schema_string = '..'
+
+my_json_schema = json.loads(schema_string)
+
+factory.register(my_json_schema)
+```
+
+
+Use your new dataclass
+
+```python
+from schemamodels.dynamic import FakeSchema
+
+your_data_instance = FakeSchema(property_a="hello")
+
+```
+
 ## Rationale
 
 ### The JSON Schema can come from anywhere
