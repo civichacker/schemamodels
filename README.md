@@ -11,7 +11,7 @@ Use this library to quickly turn a JSON Schema and turn into a Python dataclass 
 Install this package using the usual suspects.
 
 ```
-pip install schemamodel
+pip install schemamodels
 ```
 
 ## Usage
@@ -38,7 +38,7 @@ Assuming you have a JSON schema like:
 ```
 
 ```python
-from schemamodel import SchemaModelFactory
+from schemamodels import SchemaModelFactory
 
 
 factory = SchemaModelFactory()
