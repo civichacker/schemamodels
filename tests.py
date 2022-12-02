@@ -28,7 +28,7 @@ def test_enforce_required():
     '''
     t = json.loads(test)
     dmod = importlib.import_module('schemamodels.dynamic')
-    sm = SchemaModel()
+    sm = SchemaModelFactory()
     validators.Draft202012Validator.check_schema(t)
 
     try:
@@ -63,7 +63,7 @@ def test_immutability():
     }
     '''
     t = json.loads(test)
-    sm = SchemaModel()
+    sm = SchemaModelFactory()
     sm.register(t)
 
     from schemamodels.dynamic import FakeSchema
@@ -94,7 +94,7 @@ def test_default_support():
     }
     '''
     t = json.loads(test)
-    sm = SchemaModel()
+    sm = SchemaModelFactory()
     sm.register(t)
 
     from schemamodels.dynamic import FakeSchema
