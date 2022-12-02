@@ -26,11 +26,11 @@ Assuming you have a JSON schema like:
         "description": "Blue Blah",
         "type": "object",
         "properties": {
-            "provider_id": {
+            "property_a": {
               "default": 5,
               "type": "integer"
             },
-            "brand_name": {
+            "property_b": {
               "type": "string"
             }
         }
