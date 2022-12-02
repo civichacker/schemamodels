@@ -3,7 +3,7 @@ import json
 import importlib
 from dataclasses import make_dataclass, FrozenInstanceError, asdict
 
-from schemamodel import SchemaModel
+from schemamodels import SchemaModelFactory
 
 import pytest
 
@@ -27,13 +27,13 @@ def test_enforce_required():
     }
     '''
     t = json.loads(test)
-    dmod = importlib.import_module('schemamodel.dynamic')
+    dmod = importlib.import_module('schemamodels.dynamic')
     sm = SchemaModel()
     validators.Draft202012Validator.check_schema(t)
 
     try:
         assert sm.register(t)
-        from schemamodel.dynamic import FakeSchema
+        from schemamodels.dynamic import FakeSchema
     except Exception:
         assert False
 
@@ -66,7 +66,7 @@ def test_immutability():
     sm = SchemaModel()
     sm.register(t)
 
-    from schemamodel.dynamic import FakeSchema
+    from schemamodels.dynamic import FakeSchema
     fs = FakeSchema(provider_id=1, brand_name="yo")
 
     assert validate(asdict(FakeSchema(brand_name="yo", provider_id=3)), t) is None
@@ -97,7 +97,7 @@ def test_default_support():
     sm = SchemaModel()
     sm.register(t)
 
-    from schemamodel.dynamic import FakeSchema
+    from schemamodels.dynamic import FakeSchema
     fs = FakeSchema(brand_name="yo")
     assert validate({}, t) is None
 

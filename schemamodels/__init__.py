@@ -3,7 +3,7 @@ from dataclasses import make_dataclass, field
 from re import sub
 import importlib
 
-from schemamodel import dynamic
+from schemamodels import dynamic
 
 
 JSON_TYPE_MAP = {
@@ -29,9 +29,9 @@ def generate_classname(title: str) -> str:
     return sub(r'(-|_)+', '', title.title())
 
 
-class SchemaModel:
+class SchemaModelFactory:
     def __init__(self, schemas=[], allow_remote=False):
-        self.dmod = importlib.import_module('schemamodel.dynamic')
+        self.dmod = importlib.import_module('schemamodels.dynamic')
 
     def register(self, schema: dict) -> bool:
         if schema.get('type', None) != 'object':
