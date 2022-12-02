@@ -1,4 +1,6 @@
-## Schema Models
+# Schema Models
+
+![PyPI](https://img.shields.io/pypi/v/schemamodels)
 
 Dynamically created data classes from JSON schemas
 
