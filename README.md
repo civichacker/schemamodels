@@ -1,8 +1,6 @@
 # Schema Models
 
-![PyPI](https://img.shields.io/pypi/v/schemamodels?style=for-the-badge)
-
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/schemamodels?style=for-the-badge)
+![PyPI](https://img.shields.io/pypi/v/schemamodels?style=for-the-badge) ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/schemamodels?style=for-the-badge)
 
 Dynamically created data classes from JSON schemas
 
