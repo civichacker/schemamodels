@@ -41,12 +41,10 @@ Assuming you have a JSON schema like:
 from schemamodels import SchemaModelFactory
 
 
-factory = SchemaModelFactory()
-
 schema_string = '..'
-
 my_json_schema = json.loads(schema_string)
 
+factory = SchemaModelFactory()
 factory.register(my_json_schema)
 ```
 
