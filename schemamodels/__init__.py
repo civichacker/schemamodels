@@ -49,10 +49,12 @@ class SchemaModelFactory:
                 fields_with_defaults.append(entry)
             else:
                 fields.append(entry)
-        C = make_dataclass(
-            generate_classname(schema.get('title')),
-            fields + fields_with_defaults,
-            frozen=True
+        setattr(self.dmod,
+                klassname,
+                make_dataclass(
+                    klassname,
+                    fields + fields_with_defaults,
+                    frozen=True
+                )
         )
-        setattr(self.dmod, generate_classname(schema.get('title')), C)
         return True
