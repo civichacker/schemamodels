@@ -100,12 +100,10 @@ def test_default_support():
     assert fs.provider_id == 5
 
 
-def test_range_support():
-    test = '''
+def test_numeric_range_support():
+    inclusive_range = '''
     {
-        "$id": "https://schema.dev/fake-schema.schema.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "fake-schema",
+        "title": "inclusive-range",
         "description": "Blue Blah",
         "type": "object",
         "properties": {
@@ -117,11 +115,49 @@ def test_range_support():
         }
     }
     '''
-    t = json.loads(test)
+    exclusive_max_range = '''
+    {
+        "title": "exclusive-max-range",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "rating": {
+              "type": "number",
+              "minimum": 0,
+              "exclusiveMaximum": 5
+            }
+        }
+    }
+    '''
+    exclusive_min_range = '''
+    {
+        "title": "exclusive-min-range",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "rating": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 5
+            }
+        }
+    }
+    '''
+    irange = json.loads(inclusive_range)
+    emaxrange = json.loads(exclusive_max_range)
+    eminrange = json.loads(exclusive_min_range)
     sm = SchemaModelFactory()
-    sm.register(t)
+    sm.register(irange)
+    sm.register(eminrange)
+    sm.register(emaxrange)
 
-    from schemamodels.dynamic import FakeSchema
+    from schemamodels.dynamic import InclusiveRange, ExclusiveMaxRange, ExclusiveMinRange
 
     with pytest.raises(Exception):
-        fs = FakeSchema(rating=6)
+        fs = InclusiveRange(rating=6)
+
+    with pytest.raises(Exception):
+        fs = ExclusiveMaxRange(rating=5)
+
+    with pytest.raises(Exception):
+        fs = ExclusiveMinRange(rating=0)
