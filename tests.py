@@ -98,3 +98,30 @@ def test_default_support():
     fs = FakeSchema(brand_name="yo")
 
     assert fs.provider_id == 5
+
+
+def test_range_support():
+    test = '''
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "fake-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "rating": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 5
+            }
+        }
+    }
+    '''
+    t = json.loads(test)
+    sm = SchemaModelFactory()
+    sm.register(t)
+
+    from schemamodels.dynamic import FakeSchema
+
+    with pytest.raises(Exception):
+        fs = FakeSchema(rating=6)
