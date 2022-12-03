@@ -34,6 +34,10 @@ class SchemaModelFactory:
         self.dmod = importlib.import_module('schemamodels.dynamic')
 
     def register(self, schema: dict) -> bool:
+        if not schema.get('title', None):
+            return False
+        else:
+            klassname = generate_classname(schema.get('title'))
         if schema.get('type', None) != 'object':
             return False
         fields = list()
