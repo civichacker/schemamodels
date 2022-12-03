@@ -146,10 +146,8 @@ def test_numeric_range_support():
     irange = json.loads(inclusive_range)
     emaxrange = json.loads(exclusive_max_range)
     eminrange = json.loads(exclusive_min_range)
-    sm = SchemaModelFactory()
+    sm = SchemaModelFactory(schemas=[eminrange, emaxrange])
     sm.register(irange)
-    sm.register(eminrange)
-    sm.register(emaxrange)
 
     from schemamodels.dynamic import InclusiveRange, ExclusiveMaxRange, ExclusiveMinRange
 

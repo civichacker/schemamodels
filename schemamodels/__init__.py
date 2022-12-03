@@ -50,7 +50,7 @@ def process_metadata_expression(dataclass_instance):
 class SchemaModelFactory:
     def __init__(self, schemas=[], allow_remote=False):
         self.dmod = importlib.import_module('schemamodels.dynamic')
-        map(self.register, schemas)
+        list(map(lambda s: self.register(s), schemas))  # FIXME: find another way to 'process' the map
 
     def register(self, schema: dict) -> bool:
         if not schema.get('title', None):
