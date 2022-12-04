@@ -46,14 +46,14 @@ def process_metadata_expression(dataclass_instance):
     fields_with_metadata = filter(lambda f: f.metadata != {}, fs(dataclass_instance))
     final_form = map(lambda f: {'value': getattr(dataclass_instance,  f.name), 'name': f.name, 'metadata': f.metadata}, fields_with_metadata)
     if not all(map(lambda i: all([pop(i['value']) for pop in i['metadata'].values()]) , final_form)):
-        raise e.RangeConstraintViolation
+        raise e.RangeConstraintViolation("violates range contraint")
     return True
 
 
 def process_value_checks(dataclass_instance):
     all_the_fields = fs(dataclass_instance)
     if not all(isinstance(getattr(dataclass_instance, f.name), f.type) for f in all_the_fields):
-        raise e.ValueTypeViolation
+        raise e.ValueTypeViolation("incorrect type assigned to JSON property")
     return True
 
 
