@@ -42,7 +42,6 @@ Assuming you have a JSON schema like:
 ```python
 from schemamodels import SchemaModelFactory
 
-
 schema_string = '..'
 my_json_schema = json.loads(schema_string)
 
@@ -55,8 +54,6 @@ Use your new dataclass
 
 ```python
 from schemamodels.dynamic import FakeSchema
-
-
 
 your_data_instance = FakeSchema(property_a=2334)  # OK
 
