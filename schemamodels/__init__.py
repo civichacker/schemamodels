@@ -1,3 +1,4 @@
+import sys
 from abc import ABC, abstractmethod
 from dataclasses import make_dataclass, field, fields as fs
 from re import sub
@@ -91,14 +92,20 @@ class SchemaModelFactory:
 
             else:
                 fields.append(entry)
+        dklass = partial(
+            make_dataclass,
+                klassname,
+                fields + fields_with_defaults,
+                frozen=True,
+                namespace={
+                    '__post_init__': lambda self: process_value_checks(self) or process_metadata_expression(self)
+                })
+        if sys.version_info.major == 3 and sys.version_info.minor >= 10:
+            dataklass = dklass(slots=True)
+        else:
+            dataklass = dklass()
         setattr(self.dmod,
                 klassname,
-                make_dataclass(
-                    klassname,
-                    fields + fields_with_defaults,
-                    frozen=True,
-                    namespace={
-                        '__post_init__': lambda self: process_value_checks(self) or process_metadata_expression(self)
-                    })
+                dataklass
         )
         return True
