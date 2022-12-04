@@ -5,7 +5,7 @@
 Dynamically created data classes from JSON schemas
 
 
-Use this library to quickly turn a JSON Schema and turn into a Python dataclass that you can immediately consume.
+Use this library to quickly turn a JSON Schema into a Python dataclass that you can immediately consume.
 
 
 ## Installation
