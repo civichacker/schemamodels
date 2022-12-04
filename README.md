@@ -53,11 +53,12 @@ factory.register(my_json_schema)
 Use your new dataclass
 
 ```python
+from schemamodels import exceptions
 from schemamodels.dynamic import FakeSchema
 
 your_data_instance = FakeSchema(property_a=2334)  # OK
 
-with pytest.raises(Exception):
+with pytest.raises(exceptions.ValueTypeViolation):
   your_data_instance = FakeSchema(property_a="hello")
 
 ```
