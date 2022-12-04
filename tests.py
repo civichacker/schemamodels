@@ -98,3 +98,64 @@ def test_default_support():
     fs = FakeSchema(brand_name="yo")
 
     assert fs.provider_id == 5
+
+
+def test_numeric_range_support():
+    inclusive_range = '''
+    {
+        "title": "inclusive-range",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "rating": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 5
+            }
+        }
+    }
+    '''
+    exclusive_max_range = '''
+    {
+        "title": "exclusive-max-range",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "rating": {
+              "type": "number",
+              "minimum": 0,
+              "exclusiveMaximum": 5
+            }
+        }
+    }
+    '''
+    exclusive_min_range = '''
+    {
+        "title": "exclusive-min-range",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "rating": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 5
+            }
+        }
+    }
+    '''
+    irange = json.loads(inclusive_range)
+    emaxrange = json.loads(exclusive_max_range)
+    eminrange = json.loads(exclusive_min_range)
+    sm = SchemaModelFactory(schemas=[eminrange, emaxrange])
+    sm.register(irange)
+
+    from schemamodels.dynamic import InclusiveRange, ExclusiveMaxRange, ExclusiveMinRange
+
+    with pytest.raises(Exception):
+        fs = InclusiveRange(rating=6)
+
+    with pytest.raises(Exception):
+        fs = ExclusiveMaxRange(rating=5)
+
+    with pytest.raises(Exception):
+        fs = ExclusiveMinRange(rating=0)
