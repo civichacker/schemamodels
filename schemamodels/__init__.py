@@ -51,7 +51,7 @@ def process_metadata_expression(dataclass_instance):
 
 def process_value_checks(dataclass_instance):
     all_the_fields = fs(dataclass_instance)
-    if not all([isinstance(getattr(dataclass_instance, f.name), f.type) for f in all_the_fields]):
+    if not all(isinstance(getattr(dataclass_instance, f.name), f.type) for f in all_the_fields):
         raise Exception
     return True
 
