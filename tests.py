@@ -159,3 +159,34 @@ def test_numeric_range_support():
 
     with pytest.raises(Exception):
         fs = ExclusiveMinRange(rating=0)
+
+
+@pytest.mark.type
+def test_type_enforcement():
+    test = '''
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "fake-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "type": "integer"
+            },
+            "brand_name": {
+              "type": "string"
+            }
+        }
+    }
+    '''
+    t = json.loads(test)
+    sm = SchemaModelFactory()
+    sm.register(t)
+
+    from schemamodels.dynamic import FakeSchema
+    with pytest.raises(Exception):
+        FakeSchema(provider_id="a", brand_name="b")
+
+    with pytest.raises(Exception):
+        FakeSchema(provider_id=1, brand_name=1)

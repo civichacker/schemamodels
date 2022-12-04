@@ -44,6 +44,14 @@ def process_metadata_expression(dataclass_instance):
     final_form = map(lambda f: {'value': getattr(dataclass_instance,  f.name), 'name': f.name, 'metadata': f.metadata}, fields_with_metadata)
     if not all(map(lambda i: all([pop(i['value']) for pop in i['metadata'].values()]) , final_form)):
         raise Exception
+    return True
+
+
+def process_value_checks(dataclass_instance):
+    all_the_fields = fs(dataclass_instance)
+    if not all([isinstance(getattr(dataclass_instance, f.name), f.type) for f in all_the_fields]):
+        raise Exception
+    return True
 
 
 
@@ -88,7 +96,7 @@ class SchemaModelFactory:
                     fields + fields_with_defaults,
                     frozen=True,
                     namespace={
-                        '__post_init__': lambda self: process_metadata_expression(self)
+                        '__post_init__': lambda self: process_value_checks(self) or process_metadata_expression(self)
                     })
         )
         return True
