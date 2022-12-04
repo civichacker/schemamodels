@@ -56,7 +56,12 @@ Use your new dataclass
 ```python
 from schemamodels.dynamic import FakeSchema
 
-your_data_instance = FakeSchema(property_a="hello")
+
+
+your_data_instance = FakeSchema(property_a=2334)  # OK
+
+with pytest.raises(Exception):
+  your_data_instance = FakeSchema(property_a="hello")
 
 ```
 
@@ -79,4 +84,4 @@ I want to be sure that the dictionary exported by these data classes would pass 
 
 While I like using Python-classes to write Python declaratively, I think letting JSON Schema drive the data models creates an opportunity to automate.
 
-When I have a valid JSON Schema, I can create a new Python dataclass with zero or one-line of code.
+When I have a valid JSON Schema, I can create a new Python dataclass with one line of code.
