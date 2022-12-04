@@ -3,7 +3,7 @@ import json
 import importlib
 from dataclasses import make_dataclass, FrozenInstanceError, asdict
 
-from schemamodels import SchemaModelFactory
+from schemamodels import SchemaModelFactory, exceptions
 
 import pytest
 
@@ -34,7 +34,7 @@ def test_enforce_required():
     try:
         assert sm.register(t)
         from schemamodels.dynamic import FakeSchema
-    except Exception:
+    except exceptions.RequiredPropertyViolation:
         assert False
 
     with pytest.raises(TypeError):
@@ -100,6 +100,7 @@ def test_default_support():
     assert fs.provider_id == 5
 
 
+@pytest.mark.range
 def test_numeric_range_support():
     inclusive_range = '''
     {
@@ -154,10 +155,10 @@ def test_numeric_range_support():
     with pytest.raises(Exception):
         fs = InclusiveRange(rating=6)
 
-    with pytest.raises(Exception):
+    with pytest.raises(exceptions.RangeConstraintViolation):
         fs = ExclusiveMaxRange(rating=5)
 
-    with pytest.raises(Exception):
+    with pytest.raises(exceptions.RangeConstraintViolation):
         fs = ExclusiveMinRange(rating=0)
 
 
@@ -185,8 +186,8 @@ def test_type_enforcement():
     sm.register(t)
 
     from schemamodels.dynamic import FakeSchema
-    with pytest.raises(Exception):
+    with pytest.raises(exceptions.ValueTypeViolation):
         FakeSchema(provider_id="a", brand_name="b")
 
-    with pytest.raises(Exception):
+    with pytest.raises(exceptions.ValueTypeViolation):
         FakeSchema(provider_id=1, brand_name=1)

@@ -7,13 +7,13 @@ from operator import gt, ge, lt, le
 
 from functools import partial
 
-from schemamodels import dynamic
+from schemamodels import dynamic, exceptions as e
 
 
 JSON_TYPE_MAP = {
     'string': str,
     'integer': int,
-    'number': float,
+    'number': (float, int),
     'null': None,
     'boolean': bool,
     'array': list
@@ -46,14 +46,14 @@ def process_metadata_expression(dataclass_instance):
     fields_with_metadata = filter(lambda f: f.metadata != {}, fs(dataclass_instance))
     final_form = map(lambda f: {'value': getattr(dataclass_instance,  f.name), 'name': f.name, 'metadata': f.metadata}, fields_with_metadata)
     if not all(map(lambda i: all([pop(i['value']) for pop in i['metadata'].values()]) , final_form)):
-        raise Exception
+        raise e.RangeConstraintViolation
     return True
 
 
 def process_value_checks(dataclass_instance):
     all_the_fields = fs(dataclass_instance)
     if not all(isinstance(getattr(dataclass_instance, f.name), f.type) for f in all_the_fields):
-        raise Exception
+        raise e.ValueTypeViolation
     return True
 
 
@@ -98,7 +98,7 @@ class SchemaModelFactory:
                 fields + fields_with_defaults,
                 frozen=True,
                 namespace={
-                    '__post_init__': lambda self: process_value_checks(self) or process_metadata_expression(self)
+                    '__post_init__': lambda self: process_value_checks(self) and process_metadata_expression(self)
                 })
         if sys.version_info.major == 3 and sys.version_info.minor >= 10:
             dataklass = dklass(slots=True)
