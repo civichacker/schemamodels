@@ -16,7 +16,7 @@ JSON_TYPE_MAP = {
     'number': (float, int),
     'null': None,
     'boolean': bool,
-    'array': list
+    'array': (list, tuple)
 }
 
 RANGE_KEYWORDS = {
