@@ -2,7 +2,7 @@ version: 2.1
 orbs:
   python: circleci/python@1.4.0
 jobs:
-  test:
+  python:
     parameters:
       version:
         type: string
@@ -39,7 +39,6 @@ workflows:
   tox-tests:
     jobs:
       - test:
-          name: python
           matrix:
             parameters:
               version: ["3.8", "3.9", "3.10"]
