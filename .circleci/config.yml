@@ -39,6 +39,7 @@ workflows:
   tox-tests:
     jobs:
       - test:
+          name: python
           matrix:
             parameters:
               version: ["3.8", "3.9", "3.10"]
