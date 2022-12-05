@@ -31,7 +31,7 @@ def generate_classname(title: str) -> str:
 
 
 def process_metadata_expression(dataclass_instance):
-    fields_with_metadata = filter(lambda f: not f.metadata, fs(dataclass_instance))
+    fields_with_metadata = filter(lambda f: f.metadata != {}, fs(dataclass_instance))
     final_form = map(lambda f: {'value': getattr(dataclass_instance,  f.name), 'name': f.name, 'metadata': f.metadata}, fields_with_metadata)
     if not all(map(lambda i: all([pop(i['value']) for pop in i['metadata'].values()]), final_form)):
         raise e.RangeConstraintViolation("violates range contraint")

@@ -152,7 +152,7 @@ def test_numeric_range_support():
 
     from schemamodels.dynamic import InclusiveRange, ExclusiveMaxRange, ExclusiveMinRange
 
-    with pytest.raises(Exception):
+    with pytest.raises(exceptions.RangeConstraintViolation):
         fs = InclusiveRange(rating=6)
 
     with pytest.raises(exceptions.RangeConstraintViolation):
