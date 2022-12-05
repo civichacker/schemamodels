@@ -78,9 +78,9 @@ def value_checks(dataclass_instance):
 
 
 class SchemaModelFactory:
-    def __init__(self, schemas=[]):
+    def __init__(self, schemas=[], error_handler=ErrorHandler, renderer=Renderer):
         self.dmod = importlib.import_module('schemamodels.dynamic')
-        list(map(lambda s: self.register(s), schemas))  # FIXME: find another way to 'process' the map
+        list(map(lambda s: self.register(s, error_handler=error_handler, renderer=renderer), schemas))  # FIXME: find another way to 'process' the map
 
     def register(self, schema: dict, error_handler=ErrorHandler, renderer=Renderer) -> bool:
         if not schema.get('title', None):
