@@ -1,7 +1,7 @@
-from jsonschema import validators, protocols, validate
+from jsonschema import validators
 import json
 import importlib
-from dataclasses import make_dataclass, FrozenInstanceError, asdict
+from dataclasses import make_dataclass, FrozenInstanceError
 
 from schemamodels import SchemaModelFactory, exceptions
 

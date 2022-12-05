@@ -46,7 +46,7 @@ def process_value_checks(dataclass_instance):
 
 
 class SchemaModelFactory:
-    def __init__(self, schemas=[], allow_remote=False):
+    def __init__(self, schemas=[]):
         self.dmod = importlib.import_module('schemamodels.dynamic')
         list(map(lambda s: self.register(s), schemas))  # FIXME: find another way to 'process' the map
 

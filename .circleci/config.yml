@@ -32,7 +32,7 @@ jobs:
       - checkout
       - python/install-packages:
           pkg-manager: poetry
-      - run: poetry run vulture schemamodels
+      - run: poetry run vulture .
 
 
 workflows:
