@@ -1,0 +1,46 @@
+version: 2.1
+orbs:
+  python: circleci/python@1.4.0
+jobs:
+  python:
+    parameters:
+      version:
+        type: string
+    docker:
+      - image: cimg/python:<< parameters.version >>
+    steps:
+      - checkout
+      - python/install-packages:
+          pkg-manager: poetry
+      - run:
+          command: poetry run pytest
+          name: Python << parameters.version >> tests
+  lint:
+    executor: python/default
+    docker:
+      - image: cimg/python:3.8
+    steps:
+      - checkout
+      - python/install-packages:
+          pkg-manager: poetry
+      - run: poetry run flake8 schemamodels
+  unused code check:
+    executor: python/default
+    docker:
+      - image: cimg/python:3.8
+    steps:
+      - checkout
+      - python/install-packages:
+          pkg-manager: poetry
+      - run: poetry run vulture .
+
+
+workflows:
+  tox-tests:
+    jobs:
+      - python:
+          matrix:
+            parameters:
+              version: ["3.8", "3.9", "3.10"]
+      - lint
+      - unused code check
