@@ -18,7 +18,7 @@ jobs:
   lint:
     executor: python/default
     docker:
-      - image: cimg/python
+      - image: cimg/python:3.8
     steps:
       - checkout
       - python/install-packages:
@@ -27,7 +27,7 @@ jobs:
   unused code check:
     executor: python/default
     docker:
-      - image: cimg/python
+      - image: cimg/python:3.8
     steps:
       - checkout
       - python/install-packages:
