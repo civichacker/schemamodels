@@ -116,7 +116,9 @@ class SchemaModelFactory:
             fields + fields_with_defaults,
             frozen=True,
             namespace={
-                '__post_init__': lambda self: process_value_checks(self) and process_metadata_expression(self)
+                '_errorhandler': error_handler.apply,
+                '_renderer': renderer.apply,
+                '__post_init__': lambda instance: constraints(value_checks(instance))._errorhandler(instance)._renderer(instance)
             })
         if sys.version_info.major == 3 and sys.version_info.minor >= 10:
             dataklass = dklass(slots=True)
