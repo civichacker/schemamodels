@@ -18,7 +18,7 @@ jobs:
   lint:
     executor: python/default
     docker:
-      - image: circleci/python
+      - image: cimg/python
     steps:
       - checkout
       - python/install-packages:
@@ -27,7 +27,7 @@ jobs:
   unused code check:
     executor: python/default
     docker:
-      - image: circleci/python
+      - image: cimg/python
     steps:
       - checkout
       - python/install-packages:
