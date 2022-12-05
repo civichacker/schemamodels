@@ -1,7 +1,7 @@
-from jsonschema import validators, protocols, validate
+from jsonschema import validators
 import json
 import importlib
-from dataclasses import make_dataclass, FrozenInstanceError, asdict
+from dataclasses import make_dataclass, FrozenInstanceError
 
 from schemamodels import SchemaModelFactory, exceptions
 
@@ -152,7 +152,7 @@ def test_numeric_range_support():
 
     from schemamodels.dynamic import InclusiveRange, ExclusiveMaxRange, ExclusiveMinRange
 
-    with pytest.raises(Exception):
+    with pytest.raises(exceptions.RangeConstraintViolation):
         fs = InclusiveRange(rating=6)
 
     with pytest.raises(exceptions.RangeConstraintViolation):
