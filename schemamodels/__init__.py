@@ -27,17 +27,18 @@ RANGE_KEYWORDS = {
         'exclusiveMaximum': gt
 }
 
+
 class ErrorHandler(ABC):
 
     @classmethod
     @abstractmethod
-    def apply(self, f: Callable):
+    def apply(cls, f: Callable):
         return f
 
     @classmethod
-    def __subclasshook__(cls, C):
+    def __subclasshook__(cls, klass):
         if cls is ErrorHandler:
-            if "apply" in C.__dict__:
+            if "apply" in klass.__dict__:
                 return True
         return NotImplemented
 
@@ -46,13 +47,13 @@ class Renderer(ABC):
 
     @classmethod
     @abstractmethod
-    def apply(self, f: Callable) -> Callable:
+    def apply(cls, f: Callable) -> Callable:
         return f
 
     @classmethod
-    def __subclasshook__(cls, C):
+    def __subclasshook__(cls, klass):
         if cls is Renderer:
-            if "apply" in C.__dict__:
+            if "apply" in klass.__dict__:
                 return True
         return NotImplemented
 
@@ -81,7 +82,7 @@ class SchemaModelFactory:
         self.dmod = importlib.import_module('schemamodels.dynamic')
         list(map(lambda s: self.register(s), schemas))  # FIXME: find another way to 'process' the map
 
-    def register(self, schema: dict, error_handler = ErrorHandler, renderer = Renderer) -> bool:
+    def register(self, schema: dict, error_handler=ErrorHandler, renderer=Renderer) -> bool:
         if not schema.get('title', None):
             return False
         else:
