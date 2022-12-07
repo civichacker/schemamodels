@@ -62,10 +62,17 @@ def value_checks(dataclass_instance):
 
 class SchemaModelFactory:
     def __init__(self, schemas=[], error_handler=DefaultErrorHandler, renderer=DefaultRenderer):
+        self.error_handler = error_handler
+        self.renderer = renderer
+        self.___check_custom_hooks()
         self.dmod = importlib.import_module('schemamodels.dynamic')
-        list(map(lambda s: self.register(s, error_handler=error_handler, renderer=renderer), schemas))  # FIXME: find another way to 'process' the map
+        list(map(lambda s: self.register(s), schemas))  # FIXME: find another way to 'process' the map
 
-    def register(self, schema: dict, error_handler=DefaultErrorHandler, renderer=DefaultRenderer) -> bool:
+    def ___check_custom_hooks(self):
+        self.error_handler()
+        self.renderer()
+
+    def register(self, schema: dict) -> bool:
         if not schema.get('title', None):
             return False
         else:
@@ -100,8 +107,8 @@ class SchemaModelFactory:
             fields + fields_with_defaults,
             frozen=True,
             namespace={
-                '_errorhandler': error_handler.apply,
-                '_renderer': renderer.apply,
+                '_errorhandler': self.error_handler.apply,
+                '_renderer': self.renderer.apply,
                 '__post_init__': lambda instance: constraints(value_checks(instance))._errorhandler(instance)._renderer(instance)
             })
         if sys.version_info.major == 3 and sys.version_info.minor >= 10:
