@@ -1,6 +1,5 @@
 import sys
 from dataclasses import make_dataclass, field, fields as fs
-from abc import ABC, abstractmethod
 from re import sub
 import importlib
 from operator import gt, ge, lt, le
@@ -8,7 +7,7 @@ from typing import Callable
 
 from functools import partial
 
-from schemamodels import exceptions as e
+from schemamodels import exceptions as e, abstract
 
 
 JSON_TYPE_MAP = {
@@ -28,34 +27,18 @@ RANGE_KEYWORDS = {
 }
 
 
-class ErrorHandler(ABC):
+class DefaultErrorHandler(abstract.BaseErrorHandler):
 
     @classmethod
-    @abstractmethod
-    def apply(cls, f: Callable):
-        return f
-
-    @classmethod
-    def __subclasshook__(cls, klass):
-        if cls is ErrorHandler:
-            if "apply" in klass.__dict__:
-                return True
-        return NotImplemented
-
-
-class Renderer(ABC):
-
-    @classmethod
-    @abstractmethod
     def apply(cls, f: Callable) -> Callable:
         return f
 
+
+class DefaultRenderer(abstract.BaseRenderer):
+
     @classmethod
-    def __subclasshook__(cls, klass):
-        if cls is Renderer:
-            if "apply" in klass.__dict__:
-                return True
-        return NotImplemented
+    def apply(cls, f: Callable) -> Callable:
+        return f
 
 
 def generate_classname(title: str) -> str:
@@ -78,11 +61,11 @@ def value_checks(dataclass_instance):
 
 
 class SchemaModelFactory:
-    def __init__(self, schemas=[], error_handler=ErrorHandler, renderer=Renderer):
+    def __init__(self, schemas=[], error_handler=DefaultErrorHandler, renderer=DefaultRenderer):
         self.dmod = importlib.import_module('schemamodels.dynamic')
         list(map(lambda s: self.register(s, error_handler=error_handler, renderer=renderer), schemas))  # FIXME: find another way to 'process' the map
 
-    def register(self, schema: dict, error_handler=ErrorHandler, renderer=Renderer) -> bool:
+    def register(self, schema: dict, error_handler=DefaultErrorHandler, renderer=DefaultRenderer) -> bool:
         if not schema.get('title', None):
             return False
         else:

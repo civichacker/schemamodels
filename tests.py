@@ -3,7 +3,8 @@ import json
 import importlib
 from dataclasses import make_dataclass, FrozenInstanceError
 
-from schemamodels import SchemaModelFactory, exceptions
+from schemamodels import SchemaModelFactory, exceptions, abstract
+
 
 import pytest
 
@@ -191,3 +192,69 @@ def test_type_enforcement():
 
     with pytest.raises(exceptions.ValueTypeViolation):
         FakeSchema(provider_id=1, brand_name=1)
+
+
+@pytest.mark.custom
+def test_custom_malformed_errorhandler():
+    test = '''
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "fake-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "type": "integer"
+            },
+            "brand_name": {
+              "type": "string"
+            }
+        }
+    }
+    '''
+
+    class MyCustomErrorHandler(abstract.BaseErrorHandler):
+        pass
+
+    t = json.loads(test)
+    sm = SchemaModelFactory()
+
+    with pytest.raises(NotImplementedError):
+        sm.register(t, error_handler=MyCustomErrorHandler)
+
+    with pytest.raises(ImportError):
+        from schemamodels.dynamic import FakeSchema
+
+
+@pytest.mark.custom
+def test_custom_malformed_renderer():
+    test = '''
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "fake-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "type": "integer"
+            },
+            "brand_name": {
+              "type": "string"
+            }
+        }
+    }
+    '''
+
+    class MyCustomRenderer(abstract.BaseErrorHandler):
+        pass
+
+    t = json.loads(test)
+    sm = SchemaModelFactory()
+
+    with pytest.raises(NotImplementedError):
+        sm.register(t, renderer=MyCustomRenderer)
+
+    with pytest.raises(ImportError):
+        from schemamodels.dynamic import FakeSchema
