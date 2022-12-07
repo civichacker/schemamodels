@@ -11,7 +11,7 @@ class BaseErrorHandler(ABC):
 
     @classmethod
     def __subclasshook__(cls, klass):
-        if cls is ErrorHandler:
+        if cls is BaseErrorHandler:
             if "apply" in klass.__dict__:
                 return True
         return NotImplementedError()
@@ -26,7 +26,7 @@ class BaseRenderer(ABC):
 
     @classmethod
     def __subclasshook__(cls, klass):
-        if cls is Renderer:
+        if cls is BaseRenderer:
             if "apply" in klass.__dict__:
                 return True
         return NotImplementedError()
