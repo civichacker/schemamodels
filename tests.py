@@ -3,7 +3,8 @@ import json
 import importlib
 from dataclasses import make_dataclass, FrozenInstanceError
 
-from schemamodels import SchemaModelFactory, exceptions
+from schemamodels import SchemaModelFactory, exceptions, abstract
+
 
 import pytest
 
@@ -12,7 +13,7 @@ def test_enforce_required():
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "fake-schema",
+        "title": "required-schema",
         "description": "",
         "type": "object",
         "properties": {
@@ -33,13 +34,13 @@ def test_enforce_required():
 
     try:
         assert sm.register(t)
-        from schemamodels.dynamic import FakeSchema
+        from schemamodels.dynamic import RequiredSchema
     except exceptions.RequiredPropertyViolation:
         assert False
 
     with pytest.raises(TypeError):
-        FakeSchema()
-        FakeSchema(provider_id=1)
+        RequiredSchema()
+        RequiredSchema(provider_id=1)
 
 
 def test_immutability():
@@ -47,7 +48,7 @@ def test_immutability():
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "fake-schema",
+        "title": "immutable-schema",
         "description": "Blue Blah",
         "type": "object",
         "properties": {
@@ -64,8 +65,8 @@ def test_immutability():
     sm = SchemaModelFactory()
     sm.register(t)
 
-    from schemamodels.dynamic import FakeSchema
-    fs = FakeSchema(provider_id=1, brand_name="yo")
+    from schemamodels.dynamic import ImmutableSchema
+    fs = ImmutableSchema(provider_id=1, brand_name="yo")
 
     with pytest.raises(FrozenInstanceError):
         fs.provider_id = 3
@@ -76,7 +77,7 @@ def test_default_support():
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "fake-schema",
+        "title": "default-schema",
         "description": "Blue Blah",
         "type": "object",
         "properties": {
@@ -94,8 +95,8 @@ def test_default_support():
     sm = SchemaModelFactory()
     sm.register(t)
 
-    from schemamodels.dynamic import FakeSchema
-    fs = FakeSchema(brand_name="yo")
+    from schemamodels.dynamic import DefaultSchema
+    fs = DefaultSchema(brand_name="yo")
 
     assert fs.provider_id == 5
 
@@ -168,7 +169,7 @@ def test_type_enforcement():
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "fake-schema",
+        "title": "type-schema",
         "description": "Blue Blah",
         "type": "object",
         "properties": {
@@ -185,9 +186,72 @@ def test_type_enforcement():
     sm = SchemaModelFactory()
     sm.register(t)
 
-    from schemamodels.dynamic import FakeSchema
+    from schemamodels.dynamic import TypeSchema
     with pytest.raises(exceptions.ValueTypeViolation):
-        FakeSchema(provider_id="a", brand_name="b")
+        TypeSchema(provider_id="a", brand_name="b")
 
     with pytest.raises(exceptions.ValueTypeViolation):
-        FakeSchema(provider_id=1, brand_name=1)
+        TypeSchema(provider_id=1, brand_name=1)
+
+
+@pytest.mark.custom
+def test_custom_malformed_errorhandler():
+    test = '''
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "fake-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "type": "integer"
+            },
+            "brand_name": {
+              "type": "string"
+            }
+        }
+    }
+    '''
+
+    class MyCustomErrorHandler(abstract.BaseErrorHandler):
+        pass
+
+    t = json.loads(test)
+
+    with pytest.raises(TypeError):
+        sm = SchemaModelFactory(error_handler=MyCustomErrorHandler)
+
+    lib = importlib.import_module('schemamodels.dynamic')
+    assert not hasattr(lib, 'FakeSchema')
+
+
+@pytest.mark.custom
+def test_custom_malformed_renderer():
+    test = '''
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "fake-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "type": "integer"
+            },
+            "brand_name": {
+              "type": "string"
+            }
+        }
+    }
+    '''
+
+    class MyCustomRenderer(abstract.BaseRenderer):
+        pass
+
+    t = json.loads(test)
+    with pytest.raises(TypeError):
+        sm = SchemaModelFactory(renderer=MyCustomRenderer)
+
+    lib = importlib.import_module('schemamodels.dynamic')
+    assert not hasattr(lib, 'FakeSchema')

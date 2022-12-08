@@ -3,10 +3,11 @@ from dataclasses import make_dataclass, field, fields as fs
 from re import sub
 import importlib
 from operator import gt, ge, lt, le
+from typing import Callable
 
 from functools import partial
 
-from schemamodels import exceptions as e
+from schemamodels import exceptions as e, abstract
 
 
 JSON_TYPE_MAP = {
@@ -26,29 +27,50 @@ RANGE_KEYWORDS = {
 }
 
 
+class DefaultErrorHandler(abstract.BaseErrorHandler):
+
+    @classmethod
+    def apply(cls, f: Callable) -> Callable:
+        return f
+
+
+class DefaultRenderer(abstract.BaseRenderer):
+
+    @classmethod
+    def apply(cls, f: Callable) -> Callable:
+        return f
+
+
 def generate_classname(title: str) -> str:
     return sub(r'(-|_)+', '', title.title())
 
 
-def process_metadata_expression(dataclass_instance):
+def constraints(dataclass_instance):
     fields_with_metadata = filter(lambda f: f.metadata != {}, fs(dataclass_instance))
     final_form = map(lambda f: {'value': getattr(dataclass_instance,  f.name), 'name': f.name, 'metadata': f.metadata}, fields_with_metadata)
     if not all(map(lambda i: all([pop(i['value']) for pop in i['metadata'].values()]), final_form)):
         raise e.RangeConstraintViolation("violates range contraint")
-    return True
+    return dataclass_instance
 
 
-def process_value_checks(dataclass_instance):
+def value_checks(dataclass_instance):
     all_the_fields = fs(dataclass_instance)
     if not all(isinstance(getattr(dataclass_instance, f.name), f.type) for f in all_the_fields):
         raise e.ValueTypeViolation("incorrect type assigned to JSON property")
-    return True
+    return dataclass_instance
 
 
 class SchemaModelFactory:
-    def __init__(self, schemas=[]):
+    def __init__(self, schemas=[], error_handler=DefaultErrorHandler, renderer=DefaultRenderer):
+        self.error_handler = error_handler
+        self.renderer = renderer
+        self.___check_custom_hooks()
         self.dmod = importlib.import_module('schemamodels.dynamic')
         list(map(lambda s: self.register(s), schemas))  # FIXME: find another way to 'process' the map
+
+    def ___check_custom_hooks(self):
+        self.error_handler()
+        self.renderer()
 
     def register(self, schema: dict) -> bool:
         if not schema.get('title', None):
@@ -85,7 +107,9 @@ class SchemaModelFactory:
             fields + fields_with_defaults,
             frozen=True,
             namespace={
-                '__post_init__': lambda self: process_value_checks(self) and process_metadata_expression(self)
+                '_errorhandler': self.error_handler.apply,
+                '_renderer': self.renderer.apply,
+                '__post_init__': lambda instance: constraints(value_checks(instance))._errorhandler(instance)._renderer(instance)
             })
         if sys.version_info.major == 3 and sys.version_info.minor >= 10:
             dataklass = dklass(slots=True)
