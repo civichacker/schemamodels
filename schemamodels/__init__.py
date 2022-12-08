@@ -7,7 +7,7 @@ from typing import Callable
 
 from functools import partial
 
-from schemamodels import exceptions as e, abstract
+from schemamodels import exceptions as e, bases
 
 
 JSON_TYPE_MAP = {
@@ -27,14 +27,14 @@ RANGE_KEYWORDS = {
 }
 
 
-class DefaultErrorHandler(abstract.BaseErrorHandler):
+class DefaultErrorHandler(bases.BaseErrorHandler):
 
     @classmethod
     def apply(cls, f: Callable) -> Callable:
         return f
 
 
-class DefaultRenderer(abstract.BaseRenderer):
+class DefaultRenderer(bases.BaseRenderer):
 
     @classmethod
     def apply(cls, f: Callable) -> Callable:

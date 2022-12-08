@@ -3,7 +3,7 @@ import json
 import importlib
 from dataclasses import make_dataclass, FrozenInstanceError
 
-from schemamodels import SchemaModelFactory, exceptions, abstract
+from schemamodels import SchemaModelFactory, exceptions, bases
 
 
 import pytest
@@ -214,7 +214,7 @@ def test_custom_malformed_errorhandler():
     }
     '''
 
-    class MyCustomErrorHandler(abstract.BaseErrorHandler):
+    class MyCustomErrorHandler(bases.BaseErrorHandler):
         pass
 
     t = json.loads(test)
@@ -246,7 +246,7 @@ def test_custom_malformed_renderer():
     }
     '''
 
-    class MyCustomRenderer(abstract.BaseRenderer):
+    class MyCustomRenderer(bases.BaseRenderer):
         pass
 
     t = json.loads(test)
