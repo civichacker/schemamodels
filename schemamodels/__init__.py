@@ -24,7 +24,7 @@ RANGE_KEYWORDS = {
         'maximum': ge,
         'exclusiveMinimum': lt,
         'exclusiveMaximum': gt,
-        'multiplesOf': lambda d,n: mod(n, d) == 0
+        'multiplesOf': lambda d, n: mod(n, d) == 0
 }
 
 
