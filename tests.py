@@ -163,6 +163,32 @@ def test_numeric_range_support():
         fs = ExclusiveMinRange(rating=0)
 
 
+@pytest.mark.multi
+def test_numeric_multiples_support():
+    multiplesof = '''
+    {
+        "title": "multiples-of",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "rating": {
+              "type": "number",
+              "multiplesOf": 7
+            }
+        }
+    }
+    '''
+    multi = json.loads(multiplesof)
+    sm = SchemaModelFactory()
+    sm.register(multi)
+
+    from schemamodels.dynamic import MultiplesOf
+
+    with pytest.raises(exceptions.RangeConstraintViolation):
+        fs = MultiplesOf(rating=20)
+
+
+
 @pytest.mark.type
 def test_type_enforcement():
     test = '''

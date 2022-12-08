@@ -2,7 +2,7 @@ import sys
 from dataclasses import make_dataclass, field, fields as fs
 from re import sub
 import importlib
-from operator import gt, ge, lt, le
+from operator import gt, ge, lt, le, mod
 from typing import Callable
 
 from functools import partial
@@ -23,7 +23,8 @@ RANGE_KEYWORDS = {
         'minimum': le,
         'maximum': ge,
         'exclusiveMinimum': lt,
-        'exclusiveMaximum': gt
+        'exclusiveMaximum': gt,
+        'multiplesOf': lambda d, n: mod(n, d) == 0
 }
 
 
