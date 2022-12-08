@@ -281,3 +281,41 @@ def test_custom_malformed_renderer():
 
     lib = importlib.import_module('schemamodels.dynamic')
     assert not hasattr(lib, 'FakeSchema')
+
+
+@pytest.mark.anyof
+def test_anyof_support():
+    anyof = '''
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "any-of-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "anyOf": [
+                {"type": "integer"},
+                {"type": "number"}
+              ]
+            },
+            "brand_name": {
+              "type": "string"
+            }
+        }
+    }
+    '''
+
+    t = json.loads(anyof)
+    sm = SchemaModelFactory()
+    sm.register(t)
+
+    lib = importlib.import_module('schemamodels.dynamic')
+
+    assert hasattr(lib, 'AnyOfSchema')
+
+    AnyOfSchema = getattr(lib, 'AnyOfSchema')
+    AnyOfSchema(provider_id=1.0, brand_name="a")
+    AnyOfSchema(provider_id=1, brand_name="a")
+    with pytest.raises(exceptions.ValueTypeViolation):
+        AnyOfSchema(provider_id="s", brand_name="a")

@@ -27,6 +27,10 @@ RANGE_KEYWORDS = {
         'multiplesOf': lambda d, n: mod(n, d) == 0
 }
 
+LOGICAL_KEYWORDS = {
+    'anyOf': any
+}
+
 
 class DefaultErrorHandler(bases.BaseErrorHandler):
 
@@ -56,7 +60,7 @@ def constraints(dataclass_instance):
 
 def value_checks(dataclass_instance):
     all_the_fields = fs(dataclass_instance)
-    if not all(isinstance(getattr(dataclass_instance, f.name), f.type) for f in all_the_fields):
+    if not all(isinstance(getattr(dataclass_instance, f.name), f.type) for f in all_the_fields if f.type):
         raise e.ValueTypeViolation("incorrect type assigned to JSON property")
     return dataclass_instance
 
@@ -74,16 +78,16 @@ class SchemaModelFactory:
         self.renderer()
 
     def register(self, schema: dict) -> bool:
-        if not schema.get('title', None):
+        reqkws = {'title', 'type', 'properties'}
+        if not reqkws <= schema.keys() or schema.get('type', None) != 'object':
             return False
         else:
             klassname = generate_classname(schema.get('title'))
-        if schema.get('type', None) != 'object':
-            return False
         fields = list()
         fields_with_defaults = list()
         required_fields = schema.get('required', [])
         for k, v in schema['properties'].items():
+            field_spec = dict()
             entry = (k, JSON_TYPE_MAP.get(v.get('type')))
             if len(required_fields) > 0 and k not in required_fields:
                 entry += (field(default=None), )
@@ -99,7 +103,9 @@ class SchemaModelFactory:
                     metad = {e: partial(RANGE_KEYWORDS.get(e), v.get(e)) for e in _range}
                 entry += (field(metadata=metad), )
                 fields.append(entry)
-
+            elif {'anyOf'} < v.keys():
+                fields.append(entry)
+                return False
             else:
                 fields.append(entry)
         dklass = partial(
