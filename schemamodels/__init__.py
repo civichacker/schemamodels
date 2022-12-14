@@ -83,7 +83,20 @@ def process_functors(nodes):
 def constraints(dataclass_instance):
     fields_with_metadata = filter(lambda f: f.metadata != {}, fs(dataclass_instance))
     final_form = map(lambda f: {'value': getattr(dataclass_instance,  f.name), 'name': f.name, 'metadata': f.metadata}, fields_with_metadata)
-    if not all(map(lambda i: all([pop(i['value']) for pop in i['metadata'].values()]), final_form)):
+
+    nodes = process_functors(final_form)
+
+    if len([n for n in nodes if not n.get('type', True)]) > 0:
+        raise e.ValueTypeViolation("incorrect type assigned to JSON property")
+    if len([n for n in nodes if not n.get('maximum', True)]) > 0:
+        raise e.RangeConstraintViolation("violates range contraint")
+    if len([n for n in nodes if not n.get('exclusiveMaximum', True)]) > 0:
+        raise e.RangeConstraintViolation("violates range contraint")
+    if len([n for n in nodes if not n.get('exclusiveMinimum', True)]) > 0:
+        raise e.RangeConstraintViolation("violates range contraint")
+    if len([n for n in nodes if not n.get('minimum', True)]) > 0:
+        raise e.RangeConstraintViolation("violates range contraint")
+    if len([n for n in nodes if not n.get('multiplesOf', True)]) > 0:
         raise e.RangeConstraintViolation("violates range contraint")
     return dataclass_instance
 
@@ -146,7 +159,7 @@ class SchemaModelFactory:
             namespace={
                 '_errorhandler': self.error_handler.apply,
                 '_renderer': self.renderer.apply,
-                '__post_init__': lambda instance: constraints(value_checks(instance))._errorhandler(instance)._renderer(instance)
+                '__post_init__': lambda instance: constraints(instance)._errorhandler(instance)._renderer(instance)
             })
         if sys.version_info.major == 3 and sys.version_info.minor >= 10:
             dataklass = dklass(slots=True)

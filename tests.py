@@ -3,7 +3,7 @@ import json
 import importlib
 from dataclasses import make_dataclass, FrozenInstanceError
 
-from schemamodels import SchemaModelFactory, exceptions, bases
+from schemamodels import SchemaModelFactory, exceptions, bases, COMPARISONS
 
 
 import pytest
@@ -38,7 +38,7 @@ def test_enforce_required():
     except exceptions.RequiredPropertyViolation:
         assert False
 
-    with pytest.raises(TypeError):
+    with pytest.raises(exceptions.ValueTypeViolation):
         RequiredSchema()
         RequiredSchema(provider_id=1)
 
@@ -319,3 +319,26 @@ def test_anyof_support():
     AnyOfSchema(provider_id=1, brand_name="a")
     with pytest.raises(exceptions.ValueTypeViolation):
         AnyOfSchema(provider_id="s", brand_name="a")
+
+@pytest.mark.cell
+def test_type_comparison():
+    schema = {'type': 'number', 'maximum': 5, 'value': 10}
+    assert COMPARISONS['type'](schema['type'])(schema['value'])
+
+
+@pytest.mark.cell
+def test_range_comparison():
+    over = {'type': 'number', 'maximum': 5, 'value': 10}
+    under = {'type': 'number', 'maximum': 5, 'value': 3}
+    assert not COMPARISONS['maximum'](over['maximum'])(over['value'])
+    assert COMPARISONS['maximum'](under['maximum'])(under['value'])
+
+
+@pytest.mark.cell
+def test_range_minmax_comparison():
+    over = {'type': 'number', 'minimum': 0, 'maximum': 5, 'value': 10}
+    under = {'type': 'number', 'minimum': 0, 'maximum': 5, 'value': -3}
+    assert not COMPARISONS['maximum'](over['maximum'])(over['value'])
+    assert COMPARISONS['minimum'](over['minimum'])(over['value'])
+    assert not COMPARISONS['minimum'](under['minimum'])(under['value'])
+    assert COMPARISONS['maximum'](under['maximum'])(under['value'])
