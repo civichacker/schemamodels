@@ -69,6 +69,17 @@ def generate_classname(title: str) -> str:
     return sub(r'(-|_)+', '', title.title())
 
 
+def generate_functors(struct):
+    return {k: COMPARISONS[k](v) for k, v in struct.items() if k not in PORCELINE_KEYWORDS}
+
+
+def process_functors(nodes):
+    t = list()
+    for node in nodes:
+        t.append({k: v(node['value']) for k, v in node['metadata'].items()})
+    return t
+
+
 def constraints(dataclass_instance):
     fields_with_metadata = filter(lambda f: f.metadata != {}, fs(dataclass_instance))
     final_form = map(lambda f: {'value': getattr(dataclass_instance,  f.name), 'name': f.name, 'metadata': f.metadata}, fields_with_metadata)
