@@ -11,24 +11,43 @@ from schemamodels import exceptions as e, bases
 
 
 JSON_TYPE_MAP = {
-    'string': str,
-    'integer': int,
-    'number': (float, int),
-    'null': None,
-    'boolean': bool,
-    'array': (list, tuple)
+    'string': lambda d: isinstance(d, str),
+    'integer': lambda d: isinstance(d, int),
+    'number': lambda d: isinstance(d, (float, int)),
+    'null': lambda d: d is None,
+    'boolean': lambda d: isinstance(d, bool),
+    'array': lambda d: isinstance(d, (list, tuple)),
 }
 
 RANGE_KEYWORDS = {
-        'minimum': le,
-        'maximum': ge,
-        'exclusiveMinimum': lt,
-        'exclusiveMaximum': gt,
-        'multiplesOf': lambda d, n: mod(n, d) == 0
+    'minimum': le,
+    'maximum': ge,
+    'exclusiveMinimum': lt,
+    'exclusiveMaximum': gt,
+    'multiplesOf': lambda d, n: mod(n, d) == 0
 }
 
 LOGICAL_KEYWORDS = {
     'anyOf': any
+}
+
+
+PORCELINE_KEYWORDS = ['value', 'default']
+
+COMPARISONS = {
+    'type': lambda d: JSON_TYPE_MAP[d],
+    'anyOf': RANGE_KEYWORDS,
+    'string': lambda d: isinstance(d, str),
+    'integer': lambda d: isinstance(d, int),
+    'number': lambda d: isinstance(d, (float, int)),
+    'null': lambda d: d is None,
+    'boolean': lambda d: isinstance(d, bool),
+    'array': lambda d: isinstance(d, (list, tuple)),
+    'minimum': lambda d: partial(le, d),
+    'maximum': lambda d: partial(ge, d),
+    'exclusiveMinimum': lambda d: partial(lt, d),
+    'exclusiveMaximum': lambda d: partial(gt, d),
+    'multiplesOf': lambda d: partial(lambda d, n: mod(n, d) == 0, d)
 }
 
 
