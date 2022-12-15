@@ -131,26 +131,31 @@ class SchemaModelFactory:
         required_fields = schema.get('required', [])
         for k, v in schema['properties'].items():
             field_spec = dict()
-            entry = (k, JSON_TYPE_MAP.get(v.get('type')))
-            if len(required_fields) > 0 and k not in required_fields:
-                entry += (field(default=None), )
-                fields_with_defaults.append(entry)
-            elif 'default' in v.keys():
-                entry += (field(default=v.get('default')), )
-                fields_with_defaults.append(entry)
-            elif not set(RANGE_KEYWORDS.keys()).isdisjoint(set(v.keys())):
-                # Detect range expression
-                _range = list(set(RANGE_KEYWORDS.keys()).intersection(set(v)))
-                metad = dict()
-                if _range:
-                    metad = {e: partial(RANGE_KEYWORDS.get(e), v.get(e)) for e in _range}
-                entry += (field(metadata=metad), )
-                fields.append(entry)
-            elif {'anyOf'} < v.keys():
-                fields.append(entry)
-                return False
+            field_meta = dict()
+            entry = (k, )
+            if v.get('type', None):
+                entry += (JSON_TYPE_MAP.get(v.get('type')), )
+            elif 'anyOf' in v.keys() and 'type' not in v.keys():
+                entry += (None, )
+                for inner in v.get('anyOf'):
+                    print(inner)
+                    print(list(map(COMPARISONS.get, inner.keys())))
             else:
-                fields.append(entry)
+                entry += (1, )
+            if k in required_fields:
+                field_spec.update(init=True)
+
+            if 'default' in v.keys():
+                field_spec.update(default=v.get('default'))
+            else:
+                field_spec.update(default=None)
+
+            field_meta = generate_functors(v)
+            field_spec.update(metadata=field_meta)
+
+            entry += (field(**field_spec), )
+            fields.append(entry)
+
         dklass = partial(
             make_dataclass,
             klassname,
