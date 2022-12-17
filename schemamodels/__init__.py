@@ -129,6 +129,9 @@ class SchemaModelFactory:
         fields = list()
         fields_with_defaults = list()
         required_fields = schema.get('required', [])
+        if schema.get('anyOf', None): # Top-level anyOf
+            funcs = map(lambda s: generate_funcs(s), schema['anyOf'])
+            real = lambda value: map(lambda f: f['type'](value), funcs)
         for k, v in schema['properties'].items():
             field_spec = dict()
             field_meta = dict()
