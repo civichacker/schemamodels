@@ -136,13 +136,16 @@ class SchemaModelFactory:
             field_spec = dict()
             field_meta = dict()
             entry = (k, )
+            for inner in v.get('anyOf', []):
+                funcs = map(lambda s: generate_funcs(s), v['anyOf'])
+                real = lambda value: map(lambda f: f['type'](value), funcs)
+                field_meta.update({'anyOf': real})
+                #entry += (None, )
+                #print(inner)
+                #print(list(map(COMPARISONS.get, inner.keys())))
+                pass
             if v.get('type', None):
                 entry += (JSON_TYPE_MAP.get(v.get('type')), )
-            elif 'anyOf' in v.keys() and 'type' not in v.keys():
-                entry += (None, )
-                for inner in v.get('anyOf'):
-                    print(inner)
-                    print(list(map(COMPARISONS.get, inner.keys())))
             else:
                 entry += (1, )
             if k in required_fields:
@@ -153,7 +156,7 @@ class SchemaModelFactory:
             else:
                 field_spec.update(default=None)
 
-            field_meta = generate_functors(v)
+            field_meta.update(generate_functors(v))
             field_spec.update(metadata=field_meta)
 
             entry += (field(**field_spec), )
