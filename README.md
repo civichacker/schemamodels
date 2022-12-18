@@ -2,11 +2,7 @@
 
 ![PyPI](https://img.shields.io/pypi/v/schemamodels?style=for-the-badge) ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/schemamodels?style=for-the-badge)
 
-Dynamically created data classes from JSON schemas
-
-
-Use this library to quickly turn a JSON Schema into a Python dataclass that you can immediately consume.
-
+Use this library to turn a JSON Schema into a plain 'ol Python dataclass.
 
 ## Installation
 
@@ -18,7 +14,7 @@ pip install schemamodels
 
 ## Usage
 
-Assuming you have a JSON schema like:
+This library **only** supports JSON schemas of `type: object`:
 
 ```json
     {
@@ -80,6 +76,6 @@ I want to be sure that the dictionary exported by these data classes would pass 
 
 ### I'm tired of writing Python classes by hand
 
-While I like using Python-classes to write Python declaratively, I think letting JSON Schema drive the data models creates an opportunity to automate.
+While I like using classes to write Python declaratively, I think letting JSON Schema drive the data models creates an opportunity to automate.
 
 When I have a valid JSON Schema, I can create a new Python dataclass with one line of code.
