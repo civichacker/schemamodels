@@ -36,7 +36,7 @@ PORCELINE_KEYWORDS = ['value', 'default']
 
 COMPARISONS = {
     'type': lambda d: JSON_TYPE_MAP[d],
-    'anyOf': RANGE_KEYWORDS,
+    'anyOf': lambda d: partial(lambda sk, kv: [JSON_TYPE_MAP[sub[sk]] for sub in sk], d), # COMPARISONS['type'](schema['type'])(schema['value'])
     'string': lambda d: isinstance(d, str),
     'integer': lambda d: isinstance(d, int),
     'number': lambda d: isinstance(d, (float, int)),
@@ -70,21 +70,36 @@ def generate_classname(title: str) -> str:
 
 
 def generate_functors(struct):
+    for k, v in struct.items():
+        if k not in PORCELINE_KEYWORDS:
+            #print(f'func: {k} -> {COMPARISONS[k](v)("d")}')
+            pass
+
     return {k: COMPARISONS[k](v) for k, v in struct.items() if k not in PORCELINE_KEYWORDS}
 
 
 def process_functors(nodes):
     t = list()
     for node in nodes:
-        t.append({k: v(node['value']) for k, v in node['metadata'].items()})
+        for k, v in node['metadata'].items():
+            if k == 'anyOf':
+                t.append({k: any(v(node['value']))})
+            else:
+                t.append({k: v(node['value'])})
+        #t.append({k: v(node['value']) for k, v in node['metadata'].items()})
     return t
 
 
 def constraints(dataclass_instance):
     fields_with_metadata = filter(lambda f: f.metadata != {}, fs(dataclass_instance))
-    final_form = map(lambda f: {'value': getattr(dataclass_instance,  f.name), 'name': f.name, 'metadata': f.metadata}, fields_with_metadata)
+    final_form = list(map(lambda f: {'value': getattr(dataclass_instance,  f.name), 'name': f.name, 'metadata': f.metadata}, fields_with_metadata))
+    #print(final_form)
 
     nodes = process_functors(final_form)
+    #print(nodes)
+
+    if len([n for n in nodes if not n.get('anyOf', True)]) > 0:
+        raise e.ValueTypeViolation("incorrect type assigned to JSON property")
 
     if len([n for n in nodes if not n.get('type', True)]) > 0:
         raise e.ValueTypeViolation("incorrect type assigned to JSON property")
@@ -103,6 +118,7 @@ def constraints(dataclass_instance):
 
 def value_checks(dataclass_instance):
     all_the_fields = fs(dataclass_instance)
+
     if not all(isinstance(getattr(dataclass_instance, f.name), f.type) for f in all_the_fields if f.type):
         raise e.ValueTypeViolation("incorrect type assigned to JSON property")
     return dataclass_instance
@@ -130,14 +146,14 @@ class SchemaModelFactory:
         fields_with_defaults = list()
         required_fields = schema.get('required', [])
         if schema.get('anyOf', None): # Top-level anyOf
-            funcs = map(lambda s: generate_funcs(s), schema['anyOf'])
+            funcs = map(lambda s: generate_functors(s), schema['anyOf'])
             real = lambda value: map(lambda f: f['type'](value), funcs)
         for k, v in schema['properties'].items():
             field_spec = dict()
             field_meta = dict()
             entry = (k, )
             for inner in v.get('anyOf', []):
-                funcs = map(lambda s: generate_funcs(s), v['anyOf'])
+                funcs = map(lambda s: generate_functors(s), v['anyOf'])
                 real = lambda value: map(lambda f: f['type'](value), funcs)
                 field_meta.update({'anyOf': real})
                 #entry += (None, )
