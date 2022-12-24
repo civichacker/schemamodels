@@ -3,10 +3,13 @@ import json
 import importlib
 from dataclasses import make_dataclass, FrozenInstanceError
 
-from schemamodels import SchemaModelFactory, exceptions, bases
+from schemamodels import SchemaModelFactory, exceptions, bases, COMPARISONS
+from schemamodels import generate_functors
 
 
 import pytest
+
+
 
 def test_enforce_required():
     test = '''
@@ -38,7 +41,7 @@ def test_enforce_required():
     except exceptions.RequiredPropertyViolation:
         assert False
 
-    with pytest.raises(TypeError):
+    with pytest.raises(exceptions.ValueTypeViolation):
         RequiredSchema()
         RequiredSchema(provider_id=1)
 
@@ -281,3 +284,102 @@ def test_custom_malformed_renderer():
 
     lib = importlib.import_module('schemamodels.dynamic')
     assert not hasattr(lib, 'FakeSchema')
+
+
+@pytest.mark.anyof
+def test_anyof_support():
+    anyof = '''
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "any-of-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "anyOf": [
+                {"type": "integer"},
+                {"type": "number"}
+              ]
+            },
+            "brand_name": {
+              "type": "string"
+            }
+        }
+    }
+    '''
+
+    t = json.loads(anyof)
+    sm = SchemaModelFactory()
+    sm.register(t)
+
+    lib = importlib.import_module('schemamodels.dynamic')
+
+    assert hasattr(lib, 'AnyOfSchema')
+
+    AnyOfSchema = getattr(lib, 'AnyOfSchema')
+    AnyOfSchema(provider_id=1.4, brand_name="a")
+    AnyOfSchema(provider_id=4, brand_name="a")
+    with pytest.raises(exceptions.ValueTypeViolation):
+        AnyOfSchema(provider_id="s", brand_name="a")
+
+@pytest.mark.cell
+def test_type_comparison():
+    schema = {'type': 'number', 'maximum': 5, 'value': 10}
+    assert COMPARISONS['type'](schema['type'])(schema['value'])
+
+
+@pytest.mark.cell
+def test_range_comparison():
+    over = {'type': 'number', 'maximum': 5, 'value': 10}
+    under = {'type': 'number', 'maximum': 5, 'value': 3}
+    assert not COMPARISONS['maximum'](over['maximum'])(over['value'])
+    assert COMPARISONS['maximum'](under['maximum'])(under['value'])
+
+
+@pytest.mark.cell
+def test_range_minmax_comparison():
+    over = {'type': 'number', 'minimum': 0, 'maximum': 5, 'value': 10}
+    under = {'type': 'number', 'minimum': 0, 'maximum': 5, 'value': -3}
+    assert not COMPARISONS['maximum'](over['maximum'])(over['value'])
+    assert COMPARISONS['minimum'](over['minimum'])(over['value'])
+    assert not COMPARISONS['minimum'](under['minimum'])(under['value'])
+    assert COMPARISONS['maximum'](under['maximum'])(under['value'])
+
+
+@pytest.mark.cell
+def test_functor_generator():
+    anyof = '''
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "any-of-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "anyOf": [
+                {"type": "integer"},
+                {"type": "number"}
+              ]
+            },
+            "brand_name": {
+              "type": "string"
+            }
+        }
+    }
+    '''
+
+    t = json.loads(anyof)
+    fn = None
+    anyof_collection = t['properties']['provider_id'].get('anyOf', [])
+    funcs = map(lambda s: generate_functors(s), anyof_collection)
+    real = lambda value: map(lambda f: f['type'](value), funcs)
+    print({'anyOf': real})
+    fn = {'anyOf': real}
+
+    f = generate_functors(t['properties']['provider_id'])
+    assert next(iter(fn.values()))(1.0)
+    assert next(iter(fn.values()))(1)
+    assert any(list(next(iter(fn.values()))(1.0)))
+    assert all(list(next(iter(fn.values()))("e")))
