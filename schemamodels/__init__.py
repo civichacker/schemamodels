@@ -83,7 +83,15 @@ def process_functors(nodes):
     for node in nodes:
         for k, v in node['metadata'].items():
             if k == 'anyOf':
-                t.append({k: any(v(node['value']))})
+                ans_list = v(node["value"])
+                #print(f'process: {v}')
+                #print(f'process: node value -> {node["value"]}')
+                #print(f'process: {ans_list}')
+                #print(f'process (testing exhaustion): {ans_list}')
+                #print(f'process: {any(ans_list)}')
+                t.append({k: any(ans_list)})
+            elif k == 'allOf':
+                t.append({k: all(list(v(node['value'])))})
             else:
                 t.append({k: v(node['value'])})
         #t.append({k: v(node['value']) for k, v in node['metadata'].items()})
@@ -93,10 +101,10 @@ def process_functors(nodes):
 def constraints(dataclass_instance):
     fields_with_metadata = filter(lambda f: f.metadata != {}, fs(dataclass_instance))
     final_form = list(map(lambda f: {'value': getattr(dataclass_instance,  f.name), 'name': f.name, 'metadata': f.metadata}, fields_with_metadata))
-    #print(final_form)
+    #print(f'final form {final_form}')
 
     nodes = process_functors(final_form)
-    #print(nodes)
+    #print(f' nodes -> {nodes}')
 
     if len([n for n in nodes if not n.get('anyOf', True)]) > 0:
         raise e.ValueTypeViolation("incorrect type assigned to JSON property")
@@ -146,15 +154,15 @@ class SchemaModelFactory:
         fields_with_defaults = list()
         required_fields = schema.get('required', [])
         if schema.get('anyOf', None): # Top-level anyOf
-            funcs = map(lambda s: generate_functors(s), schema['anyOf'])
+            funcs = [generate_functors(s) for s in schema['anyOf']]
             real = lambda value: map(lambda f: f['type'](value), funcs)
         for k, v in schema['properties'].items():
             field_spec = dict()
             field_meta = dict()
             entry = (k, )
             for inner in v.get('anyOf', []):
-                funcs = map(lambda s: generate_functors(s), v['anyOf'])
-                real = lambda value: map(lambda f: f['type'](value), funcs)
+                funcs = [generate_functors(s) for s in v['anyOf']]
+                real = lambda value: list(f['type'](value) for f in funcs)
                 field_meta.update({'anyOf': real})
                 #entry += (None, )
                 #print(inner)
