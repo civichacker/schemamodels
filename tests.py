@@ -4,9 +4,12 @@ import importlib
 from dataclasses import make_dataclass, FrozenInstanceError
 
 from schemamodels import SchemaModelFactory, exceptions, bases, COMPARISONS
+from schemamodels import generate_functors
 
 
 import pytest
+
+
 
 def test_enforce_required():
     test = '''
@@ -342,3 +345,42 @@ def test_range_minmax_comparison():
     assert COMPARISONS['minimum'](over['minimum'])(over['value'])
     assert not COMPARISONS['minimum'](under['minimum'])(under['value'])
     assert COMPARISONS['maximum'](under['maximum'])(under['value'])
+
+
+@pytest.mark.cell
+def test_functor_generator():
+    anyof = '''
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "any-of-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "anyOf": [
+                {"type": "integer"},
+                {"type": "number"}
+              ]
+            },
+            "brand_name": {
+              "type": "string"
+            }
+        }
+    }
+    '''
+
+    t = json.loads(anyof)
+    fn = None
+    anyof_collection = t['properties']['provider_id'].get('anyOf', [])
+    for inner in anyof_collection:
+        funcs = map(lambda s: generate_functors(s), anyof_collection)
+        real = lambda value: map(lambda f: f['type'](value), funcs)
+        print({'anyOf': real})
+        fn = {'anyOf': real}
+
+    f = generate_functors(t['properties']['provider_id'])
+    assert next(iter(fn.values()))(1.0)
+    assert next(iter(fn.values()))(1)
+    assert any(list(next(iter(fn.values()))(1.0)))
+    assert all(list(next(iter(fn.values()))("e")))
