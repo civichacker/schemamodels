@@ -70,11 +70,6 @@ def generate_classname(title: str) -> str:
 
 
 def generate_functors(struct):
-    for k, v in struct.items():
-        if k not in PORCELINE_KEYWORDS:
-            #print(f'func: {k} -> {COMPARISONS[k](v)("d")}')
-            pass
-
     return {k: COMPARISONS[k](v) for k, v in struct.items() if k not in PORCELINE_KEYWORDS}
 
 
