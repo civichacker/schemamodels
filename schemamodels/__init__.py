@@ -19,24 +19,11 @@ JSON_TYPE_MAP = {
     'array': lambda d: isinstance(d, (list, tuple)),
 }
 
-RANGE_KEYWORDS = {
-    'minimum': le,
-    'maximum': ge,
-    'exclusiveMinimum': lt,
-    'exclusiveMaximum': gt,
-    'multiplesOf': lambda d, n: mod(n, d) == 0
-}
-
-LOGICAL_KEYWORDS = {
-    'anyOf': any
-}
-
-
 PORCELINE_KEYWORDS = ['value', 'default', 'anyOf']
 
 COMPARISONS = {
     'type': lambda d: JSON_TYPE_MAP[d],
-    'anyOf': lambda d: partial(lambda sk, kv: [JSON_TYPE_MAP[sub[sk]] for sub in sk], d), # COMPARISONS['type'](schema['type'])(schema['value'])
+    'anyOf': lambda d: partial(lambda sk: [JSON_TYPE_MAP[sub[sk]] for sub in sk], d),  # COMPARISONS['type'](schema['type'])(schema['value'])
     'string': lambda d: isinstance(d, str),
     'integer': lambda d: isinstance(d, int),
     'number': lambda d: isinstance(d, (float, int)),
@@ -55,10 +42,6 @@ class DefaultErrorHandler(bases.BaseErrorHandler):
 
     @classmethod
     def apply(cls, f: Callable) -> Callable:
-        return f
-
-    @classmethod
-    def push_error(cls, f: Callable) -> Callable:
         return f
 
 
@@ -83,27 +66,31 @@ def process_functors(nodes):
         for k, v in node['metadata'].items():
             if k == 'anyOf':
                 ans_list = v(node["value"])
-                #print(f'process: {v}')
-                #print(f'process: node value -> {node["value"]}')
-                #print(f'process: {ans_list}')
-                #print(f'process (testing exhaustion): {ans_list}')
-                #print(f'process: {any(ans_list)}')
+                # print(f'process: {v}')
+                # print(f'process: node value -> {node["value"]}')
+                # print(f'process: {ans_list}')
+                # print(f'process (testing exhaustion): {ans_list}')
+                # print(f'process: {any(ans_list)}')
                 t.append({k: any(ans_list)})
             elif k == 'allOf':
                 t.append({k: all(list(v(node['value'])))})
             else:
                 t.append({k: v(node['value'])})
-        #t.append({k: v(node['value']) for k, v in node['metadata'].items()})
+        # t.append({k: v(node['value']) for k, v in node['metadata'].items()})
     return t
+
+
+def functor_eval(functors: Callable, value):
+    return map(lambda f: f['type'](value), functors)
 
 
 def constraints(dataclass_instance):
     fields_with_metadata = filter(lambda f: f.metadata != {}, fs(dataclass_instance))
     final_form = list(map(lambda f: {'value': getattr(dataclass_instance,  f.name), 'name': f.name, 'metadata': f.metadata}, fields_with_metadata))
-    #print(f'final form {final_form}')
+    # print(f'final form {final_form}')
 
     nodes = process_functors(final_form)
-    #print(f' nodes -> {nodes}')
+    # print(f' nodes -> {nodes}')
 
     if len([n for n in nodes if not n.get('anyOf', True)]) > 0:
         raise e.ValueTypeViolation("incorrect type assigned to JSON property")
@@ -120,14 +107,6 @@ def constraints(dataclass_instance):
         raise e.RangeConstraintViolation("violates range contraint")
     if len([n for n in nodes if not n.get('multiplesOf', True)]) > 0:
         raise e.RangeConstraintViolation("violates range contraint")
-    return dataclass_instance
-
-
-def value_checks(dataclass_instance):
-    all_the_fields = fs(dataclass_instance)
-
-    if not all(isinstance(getattr(dataclass_instance, f.name), f.type) for f in all_the_fields if f.type):
-        raise e.ValueTypeViolation("incorrect type assigned to JSON property")
     return dataclass_instance
 
 
@@ -152,21 +131,16 @@ class SchemaModelFactory:
         fields = list()
         fields_with_defaults = list()
         required_fields = schema.get('required', [])
-        if schema.get('anyOf', None): # Top-level anyOf
+        if schema.get('anyOf', None):  # Top-level anyOf
             funcs = [generate_functors(s) for s in schema['anyOf']]
-            real = lambda value: map(lambda f: f['type'](value), funcs)
+            # Do something with this
         for k, v in schema['properties'].items():
             field_spec = dict()
             field_meta = dict()
             entry = (k, )
-            for inner in v.get('anyOf', []):
+            if 'anyOf' in v:
                 funcs = [generate_functors(s) for s in v['anyOf']]
-                real = lambda value: list(f['type'](value) for f in funcs)
-                field_meta.update({'anyOf': real})
-                #entry += (None, )
-                #print(inner)
-                #print(list(map(COMPARISONS.get, inner.keys())))
-                pass
+                field_meta.update({'anyOf': partial(functor_eval, funcs)})
             if v.get('type', None):
                 entry += (JSON_TYPE_MAP.get(v.get('type')), )
             else:
