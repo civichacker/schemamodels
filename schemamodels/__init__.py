@@ -57,6 +57,10 @@ class DefaultErrorHandler(bases.BaseErrorHandler):
     def apply(cls, f: Callable) -> Callable:
         return f
 
+    @classmethod
+    def push_error(cls, f: Callable) -> Callable:
+        return f
+
 
 class DefaultRenderer(bases.BaseRenderer):
 
