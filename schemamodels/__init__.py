@@ -32,7 +32,7 @@ LOGICAL_KEYWORDS = {
 }
 
 
-PORCELINE_KEYWORDS = ['value', 'default']
+PORCELINE_KEYWORDS = ['value', 'default', 'anyOf']
 
 COMPARISONS = {
     'type': lambda d: JSON_TYPE_MAP[d],
