@@ -34,6 +34,7 @@ COMPARISONS = {
     'maximum': lambda d: partial(ge, d),
     'exclusiveMinimum': lambda d: partial(lt, d),
     'exclusiveMaximum': lambda d: partial(gt, d),
+    'maxLength': lambda d: partial(lambda l, d: len(d) <= l, d),
     'multiplesOf': lambda d: partial(lambda d, n: mod(n, d) == 0, d)
 }
 
@@ -107,6 +108,8 @@ def constraints(dataclass_instance):
         raise e.RangeConstraintViolation("violates range contraint")
     if len([n for n in nodes if not n.get('multiplesOf', True)]) > 0:
         raise e.RangeConstraintViolation("violates range contraint")
+    if len([n for n in nodes if not n.get('maxLength', True)]) > 0:
+        raise e.LengthConstraintViolation("violates range contraint")
     return dataclass_instance
 
 

@@ -191,6 +191,31 @@ def test_numeric_multiples_support():
         fs = MultiplesOf(rating=20)
 
 
+@pytest.mark.string
+def test_string_maxlength_support():
+    maxlength = '''
+    {
+        "title": "max-length",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "brand_name": {
+              "type": "string",
+              "maxLength": 5
+            }
+        }
+    }
+    '''
+    multi = json.loads(maxlength)
+    sm = SchemaModelFactory()
+    sm.register(multi)
+
+    from schemamodels.dynamic import MaxLength
+
+    fs = MaxLength(brand_name="abcd")
+    with pytest.raises(exceptions.LengthConstraintViolation):
+        fs = MaxLength(brand_name="abcdefgh")
+
 
 @pytest.mark.type
 def test_type_enforcement():
