@@ -66,6 +66,8 @@ def process_functors(nodes):
     t = list()
     for node in nodes:
         for k, v in node['metadata'].items():
+            print(f'node value: {node["value"]}')
+            print(f'\texpression: {v}')
             if k == 'anyOf':
                 ans_list = v(node["value"])
                 # print(f'process: {v}')
