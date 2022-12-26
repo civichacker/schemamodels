@@ -201,6 +201,7 @@ def test_string_maxlength_support():
         "properties": {
             "brand_name": {
               "type": "string",
+              "minLength": 2,
               "maxLength": 5
             }
         }
@@ -215,6 +216,8 @@ def test_string_maxlength_support():
     fs = MaxLength(brand_name="abcd")
     with pytest.raises(exceptions.LengthConstraintViolation):
         fs = MaxLength(brand_name="abcdefgh")
+    with pytest.raises(exceptions.LengthConstraintViolation):
+        fs = MaxLength(brand_name="a")
 
 
 @pytest.mark.type
