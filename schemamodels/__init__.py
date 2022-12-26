@@ -34,7 +34,7 @@ COMPARISONS = {
     'maximum': lambda d: partial(ge, d),
     'exclusiveMinimum': lambda d: partial(lt, d),
     'exclusiveMaximum': lambda d: partial(gt, d),
-    'maxLength': lambda d: partial(lambda l, d: len(d) <= l, d),
+    'maxLength': lambda d: partial(lambda bound, v: len(v) <= bound, d),
     'multiplesOf': lambda d: partial(lambda d, n: mod(n, d) == 0, d)
 }
 
@@ -170,7 +170,7 @@ class SchemaModelFactory:
             namespace={
                 '_errorhandler': self.error_handler.apply,
                 '_renderer': self.renderer.apply,
-                '__post_init__': lambda instance: constraints(instance)._errorhandler(instance)._renderer(instance)
+                '__post_init__': lambda self: constraints(self)._errorhandler(self)._renderer(self)
             })
         if sys.version_info.major == 3 and sys.version_info.minor >= 10:
             dataklass = dklass(slots=True)
