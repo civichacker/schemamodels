@@ -458,10 +458,9 @@ def test_not_support():
     assert hasattr(lib, 'NotSchema')
 
     NotSchema = getattr(lib, 'NotSchema')
-    NotSchema(provider_id=3, brand_name="abcd")
     NotSchema(provider_id=5, brand_name="abcd")
     with pytest.raises(exceptions.SubSchemaFailureViolation):
-        NotSchema(provider_id=15, brand_name="abcde")
+        NotSchema(provider_id="welp", brand_name="abcde")
 
 
 @pytest.mark.cell

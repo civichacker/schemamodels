@@ -26,6 +26,7 @@ COMPARISONS = {
     'anyOf': lambda d: partial(lambda struct: generate_functors(struct), d),
     'allOf': lambda d: partial(lambda struct: generate_functors(struct), d),
     'oneOf': lambda d: partial(lambda struct: generate_functors(struct), d),
+    'not': lambda d: not_(d),
     'string': lambda d: isinstance(d, str),
     'integer': lambda d: isinstance(d, int),
     'number': lambda d: isinstance(d, (float, int)),
@@ -68,16 +69,20 @@ def process_functors(nodes):
     t = list()
     for node in nodes:
         for k, v in node['metadata'].items():
-            ans_list = v(node["value"])
             if k == 'anyOf':
+                ans_list = v(node["value"])
                 t.append({k: any([all(m.values()) for m in ans_list])})
             elif k == 'allOf':
+                ans_list = v(node["value"])
                 t.append({k: all(all(m.values()) for m in ans_list)})
             elif k == 'oneOf':
+                ans_list = v(node["value"])
                 t.append({k: reduce(xor, [all(m.values()) for m in ans_list])})
             elif k == 'not':
-                t.append({k: not_(all(m.values()) for m in ans_list)})
+                ans_list = [fun(node["value"]) for fun in v.values()]
+                t.append({k: not_(all(ans_list))})
             else:
+                ans_list = v(node["value"])
                 t.append({k: ans_list})
     return t
 
@@ -157,8 +162,7 @@ class SchemaModelFactory:
                 funcs = [generate_functors(s) for s in v['allOf']]
                 field_meta.update({'allOf': partial(functor_eval, funcs)})
             if 'not' in v:
-                funcs = [generate_functors(s) for s in v['not']]
-                field_meta.update({'not': partial(functor_eval, funcs)})
+                field_meta.update({'not': generate_functors(v.get('not'))})
             if v.get('type', None):
                 entry += (JSON_TYPE_MAP.get(v.get('type')), )
             else:
