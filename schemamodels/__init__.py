@@ -19,7 +19,7 @@ JSON_TYPE_MAP = {
     'array': lambda d: isinstance(d, (list, tuple)),
 }
 
-PORCELINE_KEYWORDS = ['value', 'default', 'anyOf', 'allOf', 'oneOf']
+PORCELINE_KEYWORDS = ['value', 'default', 'anyOf', 'allOf', 'oneOf', 'not']
 
 COMPARISONS = {
     'type': lambda d: JSON_TYPE_MAP[d],
@@ -75,6 +75,8 @@ def process_functors(nodes):
                 t.append({k: all(all(m.values()) for m in ans_list)})
             elif k == 'oneOf':
                 t.append({k: reduce(xor, [all(m.values()) for m in ans_list])})
+            elif k == 'not':
+                t.append({k: not(all(m.values()) for m in ans_list)})
             else:
                 t.append({k: ans_list})
     return t
@@ -90,13 +92,14 @@ def constraints(dataclass_instance):
 
     nodes = process_functors(final_form)
 
+    if len([n for n in nodes if not n.get('not', True)]) > 0:
+        raise e.SubSchemaFailureViolation("subschema failed")
     if len([n for n in nodes if not n.get('oneOf', True)]) > 0:
         raise e.SubSchemaFailureViolation("none or multiple of the subschemas failed")
     if len([n for n in nodes if not n.get('anyOf', True)]) > 0:
         raise e.SubSchemaFailureViolation("all of the subschemas failed")
     if len([n for n in nodes if not n.get('allOf', True)]) > 0:
         raise e.SubSchemaFailureViolation("at least one subschema failed")
-
     if len([n for n in nodes if not n.get('type', True)]) > 0:
         raise e.ValueTypeViolation("incorrect type assigned to JSON property")
     if len([n for n in nodes if not n.get('maximum', True)]) > 0:
@@ -153,6 +156,9 @@ class SchemaModelFactory:
             if 'allOf' in v:
                 funcs = [generate_functors(s) for s in v['allOf']]
                 field_meta.update({'allOf': partial(functor_eval, funcs)})
+            if 'not' in v:
+                funcs = [generate_functors(s) for s in v['not']]
+                field_meta.update({'not': partial(functor_eval, funcs)})
             if v.get('type', None):
                 entry += (JSON_TYPE_MAP.get(v.get('type')), )
             else:
