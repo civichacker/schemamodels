@@ -23,7 +23,9 @@ jobs:
       - checkout
       - python/install-packages:
           pkg-manager: poetry
-      - run: poetry run pytest --cov --cov-branch --cov-fail-under=90
+      - run: poetry run pytest --cov --cov-branch --cov-fail-under=90 --cov-report html
+      - store_artifacts:
+          path: htmlcov
   lint:
     executor: python/default
     docker:
