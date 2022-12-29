@@ -348,7 +348,7 @@ def test_anyof_support():
     AnyOfSchema = getattr(lib, 'AnyOfSchema')
     AnyOfSchema(provider_id=1.4, brand_name="a")
     AnyOfSchema(provider_id=4, brand_name="a")
-    with pytest.raises(exceptions.ValueTypeViolation):
+    with pytest.raises(exceptions.SubSchemaFailureViolation):
         AnyOfSchema(provider_id="s", brand_name="a")
 
 
@@ -385,7 +385,7 @@ def test_allof_support():
 
     AllOfSchema = getattr(lib, 'AllOfSchema')
     AllOfSchema(provider_id=1343, brand_name="abcd")
-    with pytest.raises(exceptions.ValueTypeViolation):
+    with pytest.raises(exceptions.SubSchemaFailureViolation):
         AllOfSchema(provider_id=1343, brand_name="abcdefgh")
 
 

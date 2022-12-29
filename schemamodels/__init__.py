@@ -91,11 +91,11 @@ def constraints(dataclass_instance):
     nodes = process_functors(final_form)
 
     if len([n for n in nodes if not n.get('oneOf', True)]) > 0:
-        raise e.SubSchemaFailureViolation("none of the subschemas passed")
+        raise e.SubSchemaFailureViolation("none or multiple of the subschemas failed")
     if len([n for n in nodes if not n.get('anyOf', True)]) > 0:
-        raise e.ValueTypeViolation("none of the subschemas passed")
+        raise e.SubSchemaFailureViolation("all of the subschemas failed")
     if len([n for n in nodes if not n.get('allOf', True)]) > 0:
-        raise e.ValueTypeViolation("not allOf the subschemas passed")
+        raise e.SubSchemaFailureViolation("at least one subschema failed")
 
     if len([n for n in nodes if not n.get('type', True)]) > 0:
         raise e.ValueTypeViolation("incorrect type assigned to JSON property")
