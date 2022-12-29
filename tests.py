@@ -389,6 +389,44 @@ def test_allof_support():
         AllOfSchema(provider_id=1343, brand_name="abcdefgh")
 
 
+@pytest.mark.oneof
+def test_oneof_support():
+    oneof = '''
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "one-of-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+                "oneOf": [
+                    { "type": "number", "multipleOf": 5 },
+                    { "type": "number", "multipleOf": 3 }
+                ]
+            },
+            "brand_name": {
+                "type": "string"
+            }
+        }
+    }
+    '''
+
+    t = json.loads(oneof)
+    sm = SchemaModelFactory()
+    sm.register(t)
+
+    lib = importlib.import_module('schemamodels.dynamic')
+
+    assert hasattr(lib, 'OneOfSchema')
+
+    OneOfSchema = getattr(lib, 'OneOfSchema')
+    OneOfSchema(provider_id=3, brand_name="abcd")
+    OneOfSchema(provider_id=5, brand_name="abcd")
+    with pytest.raises(exceptions.SubSchemaFailureViolation):
+        OneOfSchema(provider_id=15, brand_name="abcde")
+
+
 @pytest.mark.cell
 def test_type_comparison():
     schema = {'type': 'number', 'maximum': 5, 'value': 10}
