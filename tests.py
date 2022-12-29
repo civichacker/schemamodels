@@ -167,28 +167,28 @@ def test_numeric_range_support():
 
 
 @pytest.mark.multi
-def test_numeric_multiples_support():
-    multiplesof = '''
+def test_numeric_multiple_support():
+    multipleof = '''
     {
-        "title": "multiples-of",
+        "title": "multiple-of",
         "description": "Blue Blah",
         "type": "object",
         "properties": {
             "rating": {
               "type": "number",
-              "multiplesOf": 7
+              "multipleOf": 7
             }
         }
     }
     '''
-    multi = json.loads(multiplesof)
+    multi = json.loads(multipleof)
     sm = SchemaModelFactory()
     sm.register(multi)
 
-    from schemamodels.dynamic import MultiplesOf
+    from schemamodels.dynamic import MultipleOf
 
     with pytest.raises(exceptions.RangeConstraintViolation):
-        fs = MultiplesOf(rating=20)
+        fs = MultipleOf(rating=20)
 
 
 @pytest.mark.string
