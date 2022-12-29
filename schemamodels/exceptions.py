@@ -11,3 +11,6 @@ class RequiredPropertyViolation(SchemaViolation): pass
 
 
 class ValueTypeViolation(SchemaViolation): pass
+
+
+class SubSchemaFailureViolation(SchemaViolation): pass

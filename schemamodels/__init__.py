@@ -2,10 +2,10 @@ import sys
 from dataclasses import make_dataclass, field, fields as fs
 from re import sub
 import importlib
-from operator import gt, ge, lt, le, mod
+from operator import gt, ge, lt, le, mod, xor
 from typing import Callable
 
-from functools import partial
+from functools import partial, reduce
 
 from schemamodels import exceptions as e, bases
 
@@ -19,12 +19,13 @@ JSON_TYPE_MAP = {
     'array': lambda d: isinstance(d, (list, tuple)),
 }
 
-PORCELINE_KEYWORDS = ['value', 'default', 'anyOf', 'allOf']
+PORCELINE_KEYWORDS = ['value', 'default', 'anyOf', 'allOf', 'oneOf']
 
 COMPARISONS = {
     'type': lambda d: JSON_TYPE_MAP[d],
     'anyOf': lambda d: partial(lambda struct: generate_functors(struct), d),
     'allOf': lambda d: partial(lambda struct: generate_functors(struct), d),
+    'oneOf': lambda d: partial(lambda struct: generate_functors(struct), d),
     'string': lambda d: isinstance(d, str),
     'integer': lambda d: isinstance(d, int),
     'number': lambda d: isinstance(d, (float, int)),
@@ -72,6 +73,8 @@ def process_functors(nodes):
                 t.append({k: any([all(m.values()) for m in ans_list])})
             elif k == 'allOf':
                 t.append({k: all(all(m.values()) for m in ans_list)})
+            elif k == 'oneOf':
+                t.append({k: reduce(xor, [all(m.values()) for m in ans_list])})
             else:
                 t.append({k: ans_list})
     return t
@@ -87,6 +90,8 @@ def constraints(dataclass_instance):
 
     nodes = process_functors(final_form)
 
+    if len([n for n in nodes if not n.get('oneOf', True)]) > 0:
+        raise e.SubSchemaFailureViolation("none of the subschemas passed")
     if len([n for n in nodes if not n.get('anyOf', True)]) > 0:
         raise e.ValueTypeViolation("none of the subschemas passed")
     if len([n for n in nodes if not n.get('allOf', True)]) > 0:
