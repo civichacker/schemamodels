@@ -2,7 +2,7 @@ import sys
 from dataclasses import make_dataclass, field, fields as fs
 from re import sub
 import importlib
-from operator import gt, ge, lt, le, mod, xor
+from operator import gt, ge, lt, le, mod, xor, not_
 from typing import Callable
 
 from functools import partial, reduce
@@ -19,13 +19,14 @@ JSON_TYPE_MAP = {
     'array': lambda d: isinstance(d, (list, tuple)),
 }
 
-PORCELINE_KEYWORDS = ['value', 'default', 'anyOf', 'allOf', 'oneOf']
+PORCELINE_KEYWORDS = ['value', 'default', 'anyOf', 'allOf', 'oneOf', 'not']
 
 COMPARISONS = {
     'type': lambda d: JSON_TYPE_MAP[d],
     'anyOf': lambda d: partial(lambda struct: generate_functors(struct), d),
     'allOf': lambda d: partial(lambda struct: generate_functors(struct), d),
     'oneOf': lambda d: partial(lambda struct: generate_functors(struct), d),
+    'not': lambda d: not_(d),
     'string': lambda d: isinstance(d, str),
     'integer': lambda d: isinstance(d, int),
     'number': lambda d: isinstance(d, (float, int)),
@@ -68,14 +69,20 @@ def process_functors(nodes):
     t = list()
     for node in nodes:
         for k, v in node['metadata'].items():
-            ans_list = v(node["value"])
             if k == 'anyOf':
+                ans_list = v(node["value"])
                 t.append({k: any([all(m.values()) for m in ans_list])})
             elif k == 'allOf':
+                ans_list = v(node["value"])
                 t.append({k: all(all(m.values()) for m in ans_list)})
             elif k == 'oneOf':
+                ans_list = v(node["value"])
                 t.append({k: reduce(xor, [all(m.values()) for m in ans_list])})
+            elif k == 'not':
+                ans_list = [fun(node["value"]) for fun in v.values()]
+                t.append({k: not_(all(ans_list))})
             else:
+                ans_list = v(node["value"])
                 t.append({k: ans_list})
     return t
 
@@ -90,13 +97,14 @@ def constraints(dataclass_instance):
 
     nodes = process_functors(final_form)
 
+    if len([n for n in nodes if not n.get('not', True)]) > 0:
+        raise e.SubSchemaFailureViolation("subschema failed")
     if len([n for n in nodes if not n.get('oneOf', True)]) > 0:
         raise e.SubSchemaFailureViolation("none or multiple of the subschemas failed")
     if len([n for n in nodes if not n.get('anyOf', True)]) > 0:
         raise e.SubSchemaFailureViolation("all of the subschemas failed")
     if len([n for n in nodes if not n.get('allOf', True)]) > 0:
         raise e.SubSchemaFailureViolation("at least one subschema failed")
-
     if len([n for n in nodes if not n.get('type', True)]) > 0:
         raise e.ValueTypeViolation("incorrect type assigned to JSON property")
     if len([n for n in nodes if not n.get('maximum', True)]) > 0:
@@ -153,6 +161,8 @@ class SchemaModelFactory:
             if 'allOf' in v:
                 funcs = [generate_functors(s) for s in v['allOf']]
                 field_meta.update({'allOf': partial(functor_eval, funcs)})
+            if 'not' in v:
+                field_meta.update({'not': generate_functors(v.get('not'))})
             if v.get('type', None):
                 entry += (JSON_TYPE_MAP.get(v.get('type')), )
             else:

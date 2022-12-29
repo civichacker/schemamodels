@@ -427,6 +427,42 @@ def test_oneof_support():
         OneOfSchema(provider_id=15, brand_name="abcde")
 
 
+@pytest.mark.not_
+def test_not_support():
+    _not = '''
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "not-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+                "not": {
+                    "type": "string"
+                }
+            },
+            "brand_name": {
+                "type": "string"
+            }
+        }
+    }
+    '''
+
+    t = json.loads(_not)
+    sm = SchemaModelFactory()
+    sm.register(t)
+
+    lib = importlib.import_module('schemamodels.dynamic')
+
+    assert hasattr(lib, 'NotSchema')
+
+    NotSchema = getattr(lib, 'NotSchema')
+    NotSchema(provider_id=5, brand_name="abcd")
+    with pytest.raises(exceptions.SubSchemaFailureViolation):
+        NotSchema(provider_id="welp", brand_name="abcde")
+
+
 @pytest.mark.cell
 def test_type_comparison():
     schema = {'type': 'number', 'maximum': 5, 'value': 10}
