@@ -2,10 +2,10 @@ import sys
 from dataclasses import make_dataclass, field, fields as fs
 from re import sub
 import importlib
-from operator import gt, ge, lt, le, mod
+from operator import gt, ge, lt, le, mod, xor
 from typing import Callable
 
-from functools import partial
+from functools import partial, reduce
 
 from schemamodels import exceptions as e, bases
 
@@ -19,12 +19,13 @@ JSON_TYPE_MAP = {
     'array': lambda d: isinstance(d, (list, tuple)),
 }
 
-PORCELINE_KEYWORDS = ['value', 'default', 'anyOf', 'allOf']
+PORCELINE_KEYWORDS = ['value', 'default', 'anyOf', 'allOf', 'oneOf']
 
 COMPARISONS = {
     'type': lambda d: JSON_TYPE_MAP[d],
     'anyOf': lambda d: partial(lambda struct: generate_functors(struct), d),
     'allOf': lambda d: partial(lambda struct: generate_functors(struct), d),
+    'oneOf': lambda d: partial(lambda struct: generate_functors(struct), d),
     'string': lambda d: isinstance(d, str),
     'integer': lambda d: isinstance(d, int),
     'number': lambda d: isinstance(d, (float, int)),
@@ -37,7 +38,7 @@ COMPARISONS = {
     'exclusiveMaximum': lambda d: partial(gt, d),
     'maxLength': lambda d: partial(lambda bound, v: len(v) <= bound, d),
     'minLength': lambda d: partial(lambda bound, v: len(v) >= bound, d),
-    'multiplesOf': lambda d: partial(lambda d, n: mod(n, d) == 0, d)
+    'multipleOf': lambda d: partial(lambda d, n: mod(n, d) == 0, d)
 }
 
 
@@ -72,6 +73,8 @@ def process_functors(nodes):
                 t.append({k: any([all(m.values()) for m in ans_list])})
             elif k == 'allOf':
                 t.append({k: all(all(m.values()) for m in ans_list)})
+            elif k == 'oneOf':
+                t.append({k: reduce(xor, [all(m.values()) for m in ans_list])})
             else:
                 t.append({k: ans_list})
     return t
@@ -87,10 +90,12 @@ def constraints(dataclass_instance):
 
     nodes = process_functors(final_form)
 
+    if len([n for n in nodes if not n.get('oneOf', True)]) > 0:
+        raise e.SubSchemaFailureViolation("none or multiple of the subschemas failed")
     if len([n for n in nodes if not n.get('anyOf', True)]) > 0:
-        raise e.ValueTypeViolation("none of the subschemas passed")
+        raise e.SubSchemaFailureViolation("all of the subschemas failed")
     if len([n for n in nodes if not n.get('allOf', True)]) > 0:
-        raise e.ValueTypeViolation("not allOf the subschemas passed")
+        raise e.SubSchemaFailureViolation("at least one subschema failed")
 
     if len([n for n in nodes if not n.get('type', True)]) > 0:
         raise e.ValueTypeViolation("incorrect type assigned to JSON property")
@@ -102,7 +107,7 @@ def constraints(dataclass_instance):
         raise e.RangeConstraintViolation("violates range contraint")
     if len([n for n in nodes if not n.get('minimum', True)]) > 0:
         raise e.RangeConstraintViolation("violates range contraint")
-    if len([n for n in nodes if not n.get('multiplesOf', True)]) > 0:
+    if len([n for n in nodes if not n.get('multipleOf', True)]) > 0:
         raise e.RangeConstraintViolation("violates range contraint")
     if len([n for n in nodes if not n.get('maxLength', True)]) > 0:
         raise e.LengthConstraintViolation("violates length contraint")
@@ -142,6 +147,9 @@ class SchemaModelFactory:
             if 'anyOf' in v:
                 funcs = [generate_functors(s) for s in v['anyOf']]
                 field_meta.update({'anyOf': partial(functor_eval, funcs)})
+            if 'oneOf' in v:
+                funcs = [generate_functors(s) for s in v['oneOf']]
+                field_meta.update({'oneOf': partial(functor_eval, funcs)})
             if 'allOf' in v:
                 funcs = [generate_functors(s) for s in v['allOf']]
                 field_meta.update({'allOf': partial(functor_eval, funcs)})

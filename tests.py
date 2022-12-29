@@ -167,28 +167,28 @@ def test_numeric_range_support():
 
 
 @pytest.mark.multi
-def test_numeric_multiples_support():
-    multiplesof = '''
+def test_numeric_multiple_support():
+    multipleof = '''
     {
-        "title": "multiples-of",
+        "title": "multiple-of",
         "description": "Blue Blah",
         "type": "object",
         "properties": {
             "rating": {
               "type": "number",
-              "multiplesOf": 7
+              "multipleOf": 7
             }
         }
     }
     '''
-    multi = json.loads(multiplesof)
+    multi = json.loads(multipleof)
     sm = SchemaModelFactory()
     sm.register(multi)
 
-    from schemamodels.dynamic import MultiplesOf
+    from schemamodels.dynamic import MultipleOf
 
     with pytest.raises(exceptions.RangeConstraintViolation):
-        fs = MultiplesOf(rating=20)
+        fs = MultipleOf(rating=20)
 
 
 @pytest.mark.string
@@ -348,7 +348,7 @@ def test_anyof_support():
     AnyOfSchema = getattr(lib, 'AnyOfSchema')
     AnyOfSchema(provider_id=1.4, brand_name="a")
     AnyOfSchema(provider_id=4, brand_name="a")
-    with pytest.raises(exceptions.ValueTypeViolation):
+    with pytest.raises(exceptions.SubSchemaFailureViolation):
         AnyOfSchema(provider_id="s", brand_name="a")
 
 
@@ -385,8 +385,46 @@ def test_allof_support():
 
     AllOfSchema = getattr(lib, 'AllOfSchema')
     AllOfSchema(provider_id=1343, brand_name="abcd")
-    with pytest.raises(exceptions.ValueTypeViolation):
+    with pytest.raises(exceptions.SubSchemaFailureViolation):
         AllOfSchema(provider_id=1343, brand_name="abcdefgh")
+
+
+@pytest.mark.oneof
+def test_oneof_support():
+    oneof = '''
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "one-of-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+                "oneOf": [
+                    { "type": "number", "multipleOf": 5 },
+                    { "type": "number", "multipleOf": 3 }
+                ]
+            },
+            "brand_name": {
+                "type": "string"
+            }
+        }
+    }
+    '''
+
+    t = json.loads(oneof)
+    sm = SchemaModelFactory()
+    sm.register(t)
+
+    lib = importlib.import_module('schemamodels.dynamic')
+
+    assert hasattr(lib, 'OneOfSchema')
+
+    OneOfSchema = getattr(lib, 'OneOfSchema')
+    OneOfSchema(provider_id=3, brand_name="abcd")
+    OneOfSchema(provider_id=5, brand_name="abcd")
+    with pytest.raises(exceptions.SubSchemaFailureViolation):
+        OneOfSchema(provider_id=15, brand_name="abcde")
 
 
 @pytest.mark.cell
