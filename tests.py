@@ -191,6 +191,34 @@ def test_numeric_multiples_support():
         fs = MultiplesOf(rating=20)
 
 
+@pytest.mark.string
+def test_string_maxlength_support():
+    maxlength = '''
+    {
+        "title": "max-length",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "brand_name": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 5
+            }
+        }
+    }
+    '''
+    multi = json.loads(maxlength)
+    sm = SchemaModelFactory()
+    sm.register(multi)
+
+    from schemamodels.dynamic import MaxLength
+
+    fs = MaxLength(brand_name="abcd")
+    with pytest.raises(exceptions.LengthConstraintViolation):
+        fs = MaxLength(brand_name="abcdefgh")
+    with pytest.raises(exceptions.LengthConstraintViolation):
+        fs = MaxLength(brand_name="a")
+
 
 @pytest.mark.type
 def test_type_enforcement():
@@ -322,6 +350,44 @@ def test_anyof_support():
     AnyOfSchema(provider_id=4, brand_name="a")
     with pytest.raises(exceptions.ValueTypeViolation):
         AnyOfSchema(provider_id="s", brand_name="a")
+
+
+@pytest.mark.allof
+def test_allof_support():
+    allof = '''
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "all-of-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "type": "integer"
+            },
+            "brand_name": {
+              "allOf": [
+                {"type": "string"},
+                {"maxLength": 5}
+              ]
+            }
+        }
+    }
+    '''
+
+    t = json.loads(allof)
+    sm = SchemaModelFactory()
+    sm.register(t)
+
+    lib = importlib.import_module('schemamodels.dynamic')
+
+    assert hasattr(lib, 'AllOfSchema')
+
+    AllOfSchema = getattr(lib, 'AllOfSchema')
+    AllOfSchema(provider_id=1343, brand_name="abcd")
+    with pytest.raises(exceptions.ValueTypeViolation):
+        AllOfSchema(provider_id=1343, brand_name="abcdefgh")
+
 
 @pytest.mark.cell
 def test_type_comparison():

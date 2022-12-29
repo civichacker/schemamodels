@@ -19,11 +19,12 @@ JSON_TYPE_MAP = {
     'array': lambda d: isinstance(d, (list, tuple)),
 }
 
-PORCELINE_KEYWORDS = ['value', 'default', 'anyOf']
+PORCELINE_KEYWORDS = ['value', 'default', 'anyOf', 'allOf']
 
 COMPARISONS = {
     'type': lambda d: JSON_TYPE_MAP[d],
-    'anyOf': lambda d: partial(lambda sk: [JSON_TYPE_MAP[sub[sk]] for sub in sk], d),  # COMPARISONS['type'](schema['type'])(schema['value'])
+    'anyOf': lambda d: partial(lambda struct: generate_functors(struct), d),
+    'allOf': lambda d: partial(lambda struct: generate_functors(struct), d),
     'string': lambda d: isinstance(d, str),
     'integer': lambda d: isinstance(d, int),
     'number': lambda d: isinstance(d, (float, int)),
@@ -34,6 +35,8 @@ COMPARISONS = {
     'maximum': lambda d: partial(ge, d),
     'exclusiveMinimum': lambda d: partial(lt, d),
     'exclusiveMaximum': lambda d: partial(gt, d),
+    'maxLength': lambda d: partial(lambda bound, v: len(v) <= bound, d),
+    'minLength': lambda d: partial(lambda bound, v: len(v) >= bound, d),
     'multiplesOf': lambda d: partial(lambda d, n: mod(n, d) == 0, d)
 }
 
@@ -64,36 +67,30 @@ def process_functors(nodes):
     t = list()
     for node in nodes:
         for k, v in node['metadata'].items():
+            ans_list = v(node["value"])
             if k == 'anyOf':
-                ans_list = v(node["value"])
-                # print(f'process: {v}')
-                # print(f'process: node value -> {node["value"]}')
-                # print(f'process: {ans_list}')
-                # print(f'process (testing exhaustion): {ans_list}')
-                # print(f'process: {any(ans_list)}')
-                t.append({k: any(ans_list)})
+                t.append({k: any([all(m.values()) for m in ans_list])})
             elif k == 'allOf':
-                t.append({k: all(list(v(node['value'])))})
+                t.append({k: all(all(m.values()) for m in ans_list)})
             else:
-                t.append({k: v(node['value'])})
-        # t.append({k: v(node['value']) for k, v in node['metadata'].items()})
+                t.append({k: ans_list})
     return t
 
 
 def functor_eval(functors: Callable, value):
-    return map(lambda f: f['type'](value), functors)
+    return [{f: func[f](value) for f in func} for func in functors]
 
 
 def constraints(dataclass_instance):
     fields_with_metadata = filter(lambda f: f.metadata != {}, fs(dataclass_instance))
     final_form = list(map(lambda f: {'value': getattr(dataclass_instance,  f.name), 'name': f.name, 'metadata': f.metadata}, fields_with_metadata))
-    # print(f'final form {final_form}')
 
     nodes = process_functors(final_form)
-    # print(f' nodes -> {nodes}')
 
     if len([n for n in nodes if not n.get('anyOf', True)]) > 0:
-        raise e.ValueTypeViolation("incorrect type assigned to JSON property")
+        raise e.ValueTypeViolation("none of the subschemas passed")
+    if len([n for n in nodes if not n.get('allOf', True)]) > 0:
+        raise e.ValueTypeViolation("not allOf the subschemas passed")
 
     if len([n for n in nodes if not n.get('type', True)]) > 0:
         raise e.ValueTypeViolation("incorrect type assigned to JSON property")
@@ -107,6 +104,10 @@ def constraints(dataclass_instance):
         raise e.RangeConstraintViolation("violates range contraint")
     if len([n for n in nodes if not n.get('multiplesOf', True)]) > 0:
         raise e.RangeConstraintViolation("violates range contraint")
+    if len([n for n in nodes if not n.get('maxLength', True)]) > 0:
+        raise e.LengthConstraintViolation("violates length contraint")
+    if len([n for n in nodes if not n.get('minLength', True)]) > 0:
+        raise e.LengthConstraintViolation("violates length contraint")
     return dataclass_instance
 
 
@@ -141,6 +142,9 @@ class SchemaModelFactory:
             if 'anyOf' in v:
                 funcs = [generate_functors(s) for s in v['anyOf']]
                 field_meta.update({'anyOf': partial(functor_eval, funcs)})
+            if 'allOf' in v:
+                funcs = [generate_functors(s) for s in v['allOf']]
+                field_meta.update({'allOf': partial(functor_eval, funcs)})
             if v.get('type', None):
                 entry += (JSON_TYPE_MAP.get(v.get('type')), )
             else:
@@ -167,7 +171,7 @@ class SchemaModelFactory:
             namespace={
                 '_errorhandler': self.error_handler.apply,
                 '_renderer': self.renderer.apply,
-                '__post_init__': lambda instance: constraints(instance)._errorhandler(instance)._renderer(instance)
+                '__post_init__': lambda self: constraints(self)._errorhandler(self)._renderer(self)
             })
         if sys.version_info.major == 3 and sys.version_info.minor >= 10:
             dataklass = dklass(slots=True)
