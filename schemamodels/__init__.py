@@ -147,6 +147,9 @@ class SchemaModelFactory:
             if 'anyOf' in v:
                 funcs = [generate_functors(s) for s in v['anyOf']]
                 field_meta.update({'anyOf': partial(functor_eval, funcs)})
+            if 'oneOf' in v:
+                funcs = [generate_functors(s) for s in v['oneOf']]
+                field_meta.update({'oneOf': partial(functor_eval, funcs)})
             if 'allOf' in v:
                 funcs = [generate_functors(s) for s in v['allOf']]
                 field_meta.update({'allOf': partial(functor_eval, funcs)})
