@@ -23,7 +23,7 @@ PORCELINE_KEYWORDS = ['value', 'default', 'anyOf', 'allOf']
 
 COMPARISONS = {
     'type': lambda d: JSON_TYPE_MAP[d],
-    'anyOf': lambda d: partial(lambda struct: generate_functors(struct), d),  # COMPARISONS['type'](schema['type'])(schema['value'])
+    'anyOf': lambda d: partial(lambda struct: generate_functors(struct), d),
     'allOf': lambda d: partial(lambda struct: generate_functors(struct), d),
     'string': lambda d: isinstance(d, str),
     'integer': lambda d: isinstance(d, int),
@@ -67,46 +67,25 @@ def process_functors(nodes):
     t = list()
     for node in nodes:
         for k, v in node['metadata'].items():
-            #print(f'node value: {node["value"]}')
-            #print(f'\texpression: {v}')
+            ans_list = v(node["value"])
             if k == 'anyOf':
-                ans_list = v(node["value"])
-                # print(f'process: {v}')
-                # print(f'process: node value -> {node["value"]}')
-                print(f'processed: {ans_list}')
-                # print(f'process (testing exhaustion): {ans_list}')
-                # print(f'process: {any(ans_list)}')
-                #t.append({k: any(ans_list)})
                 t.append({k: any([all(m.values()) for m in ans_list])})
             elif k == 'allOf':
-                ans_list = v(node["value"])
-                #print(f'processed: {ans_list}')
-                #print(f'\t{k} {all(all(m.values()) for m in ans_list)}')
                 t.append({k: all(all(m.values()) for m in ans_list)})
             else:
-                ans_list = v(node["value"])
                 t.append({k: ans_list})
-        # t.append({k: v(node['value']) for k, v in node['metadata'].items()})
     return t
 
 
 def functor_eval(functors: Callable, value):
-    # return map(lambda func: {f: func[f]('value') for f in func}, functors)
-
-    print(f'uneval func: {functors}')
-    l = [{f: func[f](value) for f in func} for func in functors]
-    print(f'\teval func: {l}')
-
-    return l
+    return [{f: func[f](value) for f in func} for func in functors]
 
 
 def constraints(dataclass_instance):
     fields_with_metadata = filter(lambda f: f.metadata != {}, fs(dataclass_instance))
     final_form = list(map(lambda f: {'value': getattr(dataclass_instance,  f.name), 'name': f.name, 'metadata': f.metadata}, fields_with_metadata))
-    # print(f'final form {final_form}')
 
     nodes = process_functors(final_form)
-    # print(f' nodes -> {nodes}')
 
     if len([n for n in nodes if not n.get('anyOf', True)]) > 0:
         raise e.ValueTypeViolation("none of the subschemas passed")
@@ -162,11 +141,9 @@ class SchemaModelFactory:
             entry = (k, )
             if 'anyOf' in v:
                 funcs = [generate_functors(s) for s in v['anyOf']]
-                print(f'\t\t anyOf funcs: {funcs}')
                 field_meta.update({'anyOf': partial(functor_eval, funcs)})
             if 'allOf' in v:
                 funcs = [generate_functors(s) for s in v['allOf']]
-                #print(f'\t\t allOf funcs: {funcs}')
                 field_meta.update({'allOf': partial(functor_eval, funcs)})
             if v.get('type', None):
                 entry += (JSON_TYPE_MAP.get(v.get('type')), )
