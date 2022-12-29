@@ -2,7 +2,7 @@ import sys
 from dataclasses import make_dataclass, field, fields as fs
 from re import sub
 import importlib
-from operator import gt, ge, lt, le, mod, xor
+from operator import gt, ge, lt, le, mod, xor, not_
 from typing import Callable
 
 from functools import partial, reduce
@@ -76,7 +76,7 @@ def process_functors(nodes):
             elif k == 'oneOf':
                 t.append({k: reduce(xor, [all(m.values()) for m in ans_list])})
             elif k == 'not':
-                t.append({k: not(all(m.values()) for m in ans_list)})
+                t.append({k: not_(all(m.values()) for m in ans_list)})
             else:
                 t.append({k: ans_list})
     return t
