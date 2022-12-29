@@ -15,7 +15,7 @@ jobs:
       - run:
           command: poetry run pytest
           name: Python << parameters.version >> tests
-  code coverage:
+  code coverage over 90:
     executor: python/default
     docker:
       - image: cimg/python:3.8
@@ -52,5 +52,5 @@ workflows:
             parameters:
               version: ["3.8", "3.9", "3.10"]
       - lint
-      - code coverage
+      - code coverage over 90
       - unused code check
