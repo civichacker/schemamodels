@@ -34,7 +34,7 @@ jobs:
       - checkout
       - python/install-packages:
           pkg-manager: poetry
-      - run: poetry run flake8 schemamodels
+      - run: poetry run flake8 --max-complexity=15 schemamodels
   unused code check:
     executor: python/default
     docker:
