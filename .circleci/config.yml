@@ -53,6 +53,12 @@ workflows:
           matrix:
             parameters:
               version: ["3.8", "3.9", "3.10"]
+  linting:
+    jobs:
       - lint
+  code coverage over 90:
+    jobs:
       - code coverage over 90
+  unused code check:
+    jobs:
       - unused code check
