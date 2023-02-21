@@ -79,3 +79,10 @@ I want to be sure that the dictionary exported by these data classes would pass 
 While I like using classes to write Python declaratively, I think letting JSON Schema drive the data models creates an opportunity to automate.
 
 When I have a valid JSON Schema, I can create a new Python dataclass with one line of code.
+
+
+## Licensing
+
+This codebase is licensed under the LGPLv3+ and therefore the use, inclusion, modification, and distribution of this software is governed by the LGPL.
+
+You may opt-out of the obligations of the GPL by obtaining a commercial license. Contact `licensing AT civichacker.com` for more details.
