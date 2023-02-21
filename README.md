@@ -59,16 +59,16 @@ with pytest.raises(exceptions.ValueTypeViolation):
 
 ```
 
-## Rationale
+## Why this library exists
 
 ### The JSON Schema can come from anywhere
 
-Regardless of where the JSON schema originated, it only needs to be valid for the Draft version you care about. There are a number of libraries better suited validating a JSON Schema document. A user of this library would obtain a JSON Schema document using their prefered method (filesystem, remote), then pass it to this library.
+Regardless of where your JSON schema originated, it only needs to be valid for the Draft version you care about. There are a number of libraries better suited validating a JSON Schema document. A user of this library would obtain a JSON Schema document using their prefered method (filesystem, remote), then pass it to this library.
 
 
 ### Just-enough validation
 
-At this time, I'm not interested in validating a JSON Schema. However, there are some basic checks I'd like to have performed _every time_ create a new instance of a object that's designed to _hold_ my data. Also, questions about the quality of the data is out of scope.
+Use this library, if there are some basic checks you'd like performed _every time_ create a new instance data class. Also, questions about the quality of the data is out of scope.
 
 I want to have the confidence that the data has a structure the adhears to the rules provided by a JSON Schema.
 
