@@ -123,9 +123,9 @@ def constraints(dataclass_instance):
         raise e.ValueTypeViolation("incorrect type assigned to JSON property")
     if len([n for n in nodes if not n.get('format', True)]) > 0:
         if sys.version_info >= (3, 11):
-          raise e.StringFormatViolation("violates string format constraint")
+            raise e.StringFormatViolation("violates string format constraint")
         else:
-          raise e.StringFormatViolation("Python versions < 3.11 does not support native ISO8601 datetime parsing")
+            raise e.StringFormatViolation("Python versions < 3.11 does not support native ISO8601 datetime parsing")
     if len([n for n in nodes if not n.get('maximum', True)]) > 0:
         raise e.RangeConstraintViolation("violates range contraint")
     if len([n for n in nodes if not n.get('exclusiveMaximum', True)]) > 0:
