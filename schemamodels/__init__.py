@@ -29,7 +29,7 @@ PORCELINE_KEYWORDS = ['value', 'default', 'anyOf', 'allOf', 'oneOf', 'not']
 EMAIL_REGEX = re.compile(r"^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$")
 
 
-def exceptionalbool(func, value, exception_class=ValueError):
+def ifraises(func, value, exception_class=ValueError):
     try:
         func(value)
     except exception_class:
@@ -42,8 +42,8 @@ STRING_FORMATS = {
     'date-time': lambda e: sys.version_info >= (3, 11) and datetime.fromisoformat(e),
     'date': lambda e: sys.version_info >= (3, 11) and datetime.fromisoformat(e),
     'time': lambda e: sys.version_info >= (3, 11) and datetime.fromisoformat(e),
-    'ipv4': lambda e: exceptionalbool(ipaddress.IPv4Address, e, exception_class=ipaddress.AddressValueError),
-    'ipv6': lambda e: exceptionalbool(ipaddress.IPv6Address, e, exception_class=ipaddress.AddressValueError),
+    'ipv4': lambda e: ifraises(ipaddress.IPv4Address, e, exception_class=ipaddress.AddressValueError),
+    'ipv6': lambda e: ifraises(ipaddress.IPv6Address, e, exception_class=ipaddress.AddressValueError),
 }
 
 COMPARISONS = {
