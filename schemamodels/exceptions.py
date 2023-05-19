@@ -14,3 +14,6 @@ class ValueTypeViolation(SchemaViolation): pass
 
 
 class SubSchemaFailureViolation(SchemaViolation): pass
+
+
+class StringFormatViolation(SchemaViolation): pass

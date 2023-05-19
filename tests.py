@@ -523,3 +523,29 @@ def test_functor_generator():
     assert next(iter(fn.values()))(1)
     assert any(list(next(iter(fn.values()))(1.0)))
     assert all(list(next(iter(fn.values()))("e")))
+
+
+@pytest.mark.string
+def test_string_email_format_support():
+    schemadoc = '''
+    {
+        "title": "email-format",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "user_email": {
+              "type": "string",
+              "format": "email"
+            }
+        }
+    }
+    '''
+    stringformat = json.loads(schemadoc)
+    sm = SchemaModelFactory()
+    sm.register(stringformat)
+
+    from schemamodels.dynamic import EmailFormat
+
+    fs = EmailFormat(user_email="test@examplemail.co")
+    with pytest.raises(exceptions.StringFormatViolation):
+        fs = EmailFormat(user_email="abcdefgh")
