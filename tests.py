@@ -582,3 +582,30 @@ def test_string_datetimes_format_support():
     else:
       with pytest.raises(exceptions.StringFormatViolation):
           fs = DateFormat(event_time="2018-11-13T20:20:39+00:00")
+
+
+@pytest.mark.string
+@pytest.mark.format
+def test_string_ipaddress_format_support():
+    schemadoc = '''
+    {
+        "title": "internet-format",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "event_location": {
+              "type": "string",
+              "format": "ipv4"
+            }
+        }
+    }
+    '''
+    stringformat = json.loads(schemadoc)
+    sm = SchemaModelFactory()
+    sm.register(stringformat)
+
+    from schemamodels.dynamic import InternetFormat
+
+    fs = InternetFormat(event_location='127.0.0.1')
+    with pytest.raises(exceptions.StringFormatViolation):
+        fs = InternetFormat(event_location='welpwelp')
