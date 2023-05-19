@@ -10,6 +10,8 @@ from functools import partial, reduce
 
 from schemamodels import exceptions as e, bases
 
+from datetime import datetime
+
 
 JSON_TYPE_MAP = {
     'string': lambda d: isinstance(d, str),
@@ -26,7 +28,10 @@ PORCELINE_KEYWORDS = ['value', 'default', 'anyOf', 'allOf', 'oneOf', 'not']
 EMAIL_REGEX = re.compile(r"^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$")
 
 STRING_FORMATS = {
-    'email': lambda e: EMAIL_REGEX.match(e) is not None
+    'email': lambda e: EMAIL_REGEX.match(e) is not None,
+    'date-time': lambda e: sys.version_info >= (3, 11) and datetime.fromisoformat(e),
+    'date': lambda e: sys.version_info >= (3, 11) and datetime.fromisoformat(e),
+    'time': lambda e: sys.version_info >= (3, 11) and datetime.fromisoformat(e),
 }
 
 COMPARISONS = {
@@ -117,7 +122,10 @@ def constraints(dataclass_instance):
     if len([n for n in nodes if not n.get('type', True)]) > 0:
         raise e.ValueTypeViolation("incorrect type assigned to JSON property")
     if len([n for n in nodes if not n.get('format', True)]) > 0:
-        raise e.StringFormatViolation("violates string format constraint")
+        if sys.version_info >= (3, 11):
+          raise e.StringFormatViolation("violates string format constraint")
+        else:
+          raise e.StringFormatViolation("Python versions < 3.11 does not support native ISO8601 datetime parsing")
     if len([n for n in nodes if not n.get('maximum', True)]) > 0:
         raise e.RangeConstraintViolation("violates range contraint")
     if len([n for n in nodes if not n.get('exclusiveMaximum', True)]) > 0:

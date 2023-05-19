@@ -1,3 +1,4 @@
+import sys
 from jsonschema import validators
 import json
 import importlib
@@ -526,6 +527,7 @@ def test_functor_generator():
 
 
 @pytest.mark.string
+@pytest.mark.format
 def test_string_email_format_support():
     schemadoc = '''
     {
@@ -549,3 +551,34 @@ def test_string_email_format_support():
     fs = EmailFormat(user_email="test@examplemail.co")
     with pytest.raises(exceptions.StringFormatViolation):
         fs = EmailFormat(user_email="abcdefgh")
+
+
+@pytest.mark.string
+@pytest.mark.format
+def test_string_datetimes_format_support():
+    schemadoc = '''
+    {
+        "title": "date-format",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "event_time": {
+              "type": "string",
+              "format": "date-time"
+            }
+        }
+    }
+    '''
+    stringformat = json.loads(schemadoc)
+    sm = SchemaModelFactory()
+    sm.register(stringformat)
+
+    from schemamodels.dynamic import DateFormat
+
+    if sys.version_info >= (3, 11):
+      fs = DateFormat(event_time="2018-11-13T20:20:39+00:00")
+      with pytest.raises(exceptions.StringFormatViolation):
+          fs = DateFormat(event_time="abcdefgh")
+    else:
+      with pytest.raises(exceptions.StringFormatViolation):
+          fs = DateFormat(event_time="2018-11-13T20:20:39+00:00")
