@@ -1,3 +1,4 @@
+import sys
 from jsonschema import validators
 import json
 import importlib
@@ -523,3 +524,88 @@ def test_functor_generator():
     assert next(iter(fn.values()))(1)
     assert any(list(next(iter(fn.values()))(1.0)))
     assert all(list(next(iter(fn.values()))("e")))
+
+
+@pytest.mark.string
+@pytest.mark.format
+def test_string_email_format_support():
+    schemadoc = '''
+    {
+        "title": "email-format",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "user_email": {
+              "type": "string",
+              "format": "email"
+            }
+        }
+    }
+    '''
+    stringformat = json.loads(schemadoc)
+    sm = SchemaModelFactory()
+    sm.register(stringformat)
+
+    from schemamodels.dynamic import EmailFormat
+
+    fs = EmailFormat(user_email="test@examplemail.co")
+    with pytest.raises(exceptions.StringFormatViolation):
+        fs = EmailFormat(user_email="abcdefgh")
+
+
+@pytest.mark.string
+@pytest.mark.format
+def test_string_datetimes_format_support():
+    schemadoc = '''
+    {
+        "title": "date-format",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "event_time": {
+              "type": "string",
+              "format": "date-time"
+            }
+        }
+    }
+    '''
+    stringformat = json.loads(schemadoc)
+    sm = SchemaModelFactory()
+    sm.register(stringformat)
+
+    from schemamodels.dynamic import DateFormat
+
+    if sys.version_info >= (3, 11):
+      fs = DateFormat(event_time="2018-11-13T20:20:39+00:00")
+      with pytest.raises(exceptions.StringFormatViolation):
+          fs = DateFormat(event_time="abcdefgh")
+    else:
+      with pytest.raises(exceptions.StringFormatViolation):
+          fs = DateFormat(event_time="2018-11-13T20:20:39+00:00")
+
+
+@pytest.mark.string
+@pytest.mark.format
+def test_string_ipaddress_format_support():
+    schemadoc = '''
+    {
+        "title": "internet-format",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "event_location": {
+              "type": "string",
+              "format": "ipv4"
+            }
+        }
+    }
+    '''
+    stringformat = json.loads(schemadoc)
+    sm = SchemaModelFactory()
+    sm.register(stringformat)
+
+    from schemamodels.dynamic import InternetFormat
+
+    fs = InternetFormat(event_location='127.0.0.1')
+    with pytest.raises(exceptions.StringFormatViolation):
+        fs = InternetFormat(event_location='welpwelp')

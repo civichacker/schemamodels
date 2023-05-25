@@ -1,13 +1,17 @@
 import sys
 from dataclasses import make_dataclass, field, fields as fs
 from re import sub
+import re
 import importlib
+import ipaddress
 from operator import gt, ge, lt, le, mod, xor, not_
 from typing import Callable
 
 from functools import partial, reduce
 
 from schemamodels import exceptions as e, bases
+
+from datetime import datetime
 
 
 JSON_TYPE_MAP = {
@@ -21,6 +25,27 @@ JSON_TYPE_MAP = {
 
 PORCELINE_KEYWORDS = ['value', 'default', 'anyOf', 'allOf', 'oneOf', 'not']
 
+# Source: https://uibakery.io/regex-library/email-regex-python
+EMAIL_REGEX = re.compile(r"^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$")
+
+
+def ifraises(func, value, exception_class=ValueError):
+    try:
+        func(value)
+    except exception_class:
+        return False
+    return True
+
+
+STRING_FORMATS = {
+    'email': lambda e: EMAIL_REGEX.match(e) is not None,
+    'date-time': lambda e: sys.version_info >= (3, 11) and datetime.fromisoformat(e),
+    'date': lambda e: sys.version_info >= (3, 11) and datetime.fromisoformat(e),
+    'time': lambda e: sys.version_info >= (3, 11) and datetime.fromisoformat(e),
+    'ipv4': lambda e: ifraises(ipaddress.IPv4Address, e, exception_class=ipaddress.AddressValueError),
+    'ipv6': lambda e: ifraises(ipaddress.IPv6Address, e, exception_class=ipaddress.AddressValueError),
+}
+
 COMPARISONS = {
     'type': lambda d: JSON_TYPE_MAP[d],
     'anyOf': lambda d: partial(lambda struct: generate_functors(struct), d),
@@ -28,6 +53,7 @@ COMPARISONS = {
     'oneOf': lambda d: partial(lambda struct: generate_functors(struct), d),
     'not': lambda d: not_(d),
     'string': lambda d: isinstance(d, str),
+    'format': lambda d: partial(lambda bound, v: STRING_FORMATS[bound](v), d),
     'integer': lambda d: isinstance(d, int),
     'number': lambda d: isinstance(d, (float, int)),
     'null': lambda d: d is None,
@@ -107,6 +133,11 @@ def constraints(dataclass_instance):
         raise e.SubSchemaFailureViolation("at least one subschema failed")
     if len([n for n in nodes if not n.get('type', True)]) > 0:
         raise e.ValueTypeViolation("incorrect type assigned to JSON property")
+    if len([n for n in nodes if not n.get('format', True)]) > 0:
+        if sys.version_info >= (3, 11):
+            raise e.StringFormatViolation("violates string format constraint")
+        else:
+            raise e.StringFormatViolation("Python versions < 3.11 does not support native ISO8601 datetime parsing")
     if len([n for n in nodes if not n.get('maximum', True)]) > 0:
         raise e.RangeConstraintViolation("violates range contraint")
     if len([n for n in nodes if not n.get('exclusiveMaximum', True)]) > 0:
