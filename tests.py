@@ -609,3 +609,30 @@ def test_string_ipaddress_format_support():
     fs = InternetFormat(event_location='127.0.0.1')
     with pytest.raises(exceptions.StringFormatViolation):
         fs = InternetFormat(event_location='welpwelp')
+
+
+@pytest.mark.string
+@pytest.mark.format
+def test_string_hostname_format_support():
+    schemadoc = '''
+    {
+        "title": "internet-format",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "webhost": {
+              "type": "string",
+              "format": "hostname"
+            }
+        }
+    }
+    '''
+    stringformat = json.loads(schemadoc)
+    sm = SchemaModelFactory()
+    sm.register(stringformat)
+
+    from schemamodels.dynamic import InternetFormat
+
+    fs = InternetFormat(webhost='127.0.0.1')
+    with pytest.raises(exceptions.StringFormatViolation):
+        fs = InternetFormat(webhost='qwdqwd//qwdqwdwd.com')

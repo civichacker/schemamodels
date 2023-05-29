@@ -6,6 +6,7 @@ import importlib
 import ipaddress
 from operator import gt, ge, lt, le, mod, xor, not_
 from typing import Callable
+from urllib.parse import urlparse
 
 from functools import partial, reduce
 
@@ -28,6 +29,16 @@ PORCELINE_KEYWORDS = ['value', 'default', 'anyOf', 'allOf', 'oneOf', 'not']
 # Source: https://uibakery.io/regex-library/email-regex-python
 EMAIL_REGEX = re.compile(r"^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$")
 
+HOSTNAME_REGEX = re.compile(r'^(?P<scheme>(?:\w+(?:\+\w+)?:)//)?//(?P<reminder>.*)')
+
+
+def hostname_process(e):
+    results = HOSTNAME_REGEX.match(e)
+    if results:
+        if all(results.group('scheme'), results.group('remainder')):
+            return urlparse(e).hostname is not None
+    return False
+
 
 def ifraises(func, value, exception_class=ValueError):
     try:
@@ -44,6 +55,7 @@ STRING_FORMATS = {
     'time': lambda e: sys.version_info >= (3, 11) and datetime.fromisoformat(e),
     'ipv4': lambda e: ifraises(ipaddress.IPv4Address, e, exception_class=ipaddress.AddressValueError),
     'ipv6': lambda e: ifraises(ipaddress.IPv6Address, e, exception_class=ipaddress.AddressValueError),
+    'hostname': lambda e: hostname_process(e),
 }
 
 COMPARISONS = {
