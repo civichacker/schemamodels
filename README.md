@@ -83,6 +83,6 @@ When I have a valid JSON Schema, I can create a new Python dataclass with one li
 
 ## Licensing
 
-This codebase is licensed under the LGPLv3+ and therefore the use, inclusion, modification, and distribution of this software is governed by the LGPL.
+This codebase is licensed under the GPLv3+ and therefore the use, inclusion, modification, and distribution of this software is governed by the GPL.
 
 You may opt-out of the obligations of the GPL by obtaining a commercial license. Contact `licensing AT civichacker.com` for more details.
