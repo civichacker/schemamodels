@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2023 Civic Hacker, LLC <opensource@civichacker.com>
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 import sys
 from dataclasses import make_dataclass, field, fields as fs
 from re import sub

@@ -3,3 +3,7 @@ __pycache__/
 *.pyo
 *.swp
 dist/
+poetry.lock
+pyproject.toml
+tox.ini
+pytest.ini
