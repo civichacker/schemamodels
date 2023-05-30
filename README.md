@@ -81,8 +81,8 @@ While I like using classes to write Python declaratively, I think letting JSON S
 When I have a valid JSON Schema, I can create a new Python dataclass with one line of code.
 
 
-## Licensing
+## License
 
 This codebase is licensed under the GPLv3+ and therefore the use, inclusion, modification, and distribution of this software is governed by the GPL.
 
-You may opt-out of the obligations of the GPL by obtaining a commercial license. Contact `licensing AT civichacker.com` for more details.
+If you are planning to use schemamodels in a commercial product or wish to opt-out of the obligations of the GPL, please reach out to license@civichacker.com.
