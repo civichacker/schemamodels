@@ -9,3 +9,5 @@ poetry.lock
 pyproject.toml
 tox.ini
 pytest.ini
+.coverage
+*.json
