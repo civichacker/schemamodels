@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2023 Civic Hacker, LLC
+
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
 # Schema Models
 
 ![PyPI](https://img.shields.io/pypi/v/schemamodels?style=for-the-badge) ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/schemamodels?style=for-the-badge)
