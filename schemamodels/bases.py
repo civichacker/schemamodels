@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2023 Civic Hacker, LLC
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 from abc import ABC, abstractmethod
 from typing import Callable
 

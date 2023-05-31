@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2023 Civic Hacker, LLC
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 version: 2.1
 orbs:
   python: circleci/python@1.4.0
@@ -44,6 +47,15 @@ jobs:
       - python/install-packages:
           pkg-manager: poetry
       - run: poetry run vulture .
+  fsf compliance:
+    executor: python/default
+    docker:
+      - image: cimg/python:3.8
+    steps:
+      - checkout
+      - python/install-packages:
+          pkg-manager: poetry
+      - run: poetry run reuse lint
 
 
 workflows:
@@ -53,6 +65,15 @@ workflows:
           matrix:
             parameters:
               version: ["3.8", "3.9", "3.10", "3.11"]
+  linting:
+    jobs:
       - lint
+  code coverage over 90:
+    jobs:
       - code coverage over 90
+  unused code check:
+    jobs:
       - unused code check
+  compliance:
+    jobs:
+      - fsf compliance
