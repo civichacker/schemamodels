@@ -76,4 +76,4 @@ workflows:
       - unused code check
   compliance:
     jobs:
-      - fsf complance
+      - fsf compliance
