@@ -1,11 +1,13 @@
-# SPDX-License-Identifier: CC0-1.0
+# SPDX-FileCopyrightText: 2023 Civic Hacker, LLC
+
+# SPDX-License-Identifier: CC0-1.0#
 
 __pycache__/
 *.pyc
 *.pyo
 *.swp
 dist/
-poetry.lock
+*.lock
 pyproject.toml
 tox.ini
 pytest.ini
