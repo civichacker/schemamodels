@@ -7,6 +7,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 # Schema Models
 
 ![PyPI](https://img.shields.io/pypi/v/schemamodels?style=for-the-badge) ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/schemamodels?style=for-the-badge)
+[![REUSE status](https://api.reuse.software/badge/git.fsfe.org/reuse/api)](https://api.reuse.software/info/git.fsfe.org/reuse/api)
 
 Use this library to turn a JSON Schema into a plain 'ol Python dataclass.
 
