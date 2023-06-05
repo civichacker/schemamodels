@@ -84,7 +84,7 @@ These basic checks are performed _every time_ you create a new instance of a gen
 
 - Are the field names correct?
 - Are the required fields present?
-- Does the input match the expectations set forth by the generated dataclass?
+- Does the input match the datatype expectations set forth by the generated dataclass?
 
 ## License
 
