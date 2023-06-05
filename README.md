@@ -68,28 +68,26 @@ with pytest.raises(exceptions.ValueTypeViolation):
 
 ## Why this library exists
 
-### The JSON Schema can come from anywhere
+### Faster than defining dataclasses manually
 
-Regardless of where your JSON schema originated, it only needs to be valid for the Draft version you care about. There are a number of libraries better suited validating a JSON Schema document. A user of this library would obtain a JSON Schema document using their prefered method (filesystem, remote), then pass it to this library.
+The class-like syntax of creating dataclasses is a useful way to model a valid JSON schema. This library essentially makes your existing JSON schemas usable as a Python dataclass.
 
+### Useable everywhere
+
+Taking the time to construct a plain ol' Pythjon dataclass, ensures widespread utility across of multiple domains of study and applications.
 
 ### Just-enough validation
 
-Use this library, if there are some basic checks you'd like performed _every time_ create a new instance data class. Also, questions about the quality of the data is out of scope.
+The dataclasses are not completely dumb. Every dataclass _object_ that originated from a valid JSON schema, will perform runtime checks on the input you provide it.
 
-I want to have the confidence that the data has a structure the adhears to the rules provided by a JSON Schema.
+These basic checks are performed _every time_ you create a new instance of a generated dataclass:
 
-I want to be sure that the dictionary exported by these data classes would pass validation checks. The specific tool used to validate an instance of data against the original JSON Schema shouldn't matter.
-
-### I'm tired of writing Python classes by hand
-
-While I like using classes to write Python declaratively, I think letting JSON Schema drive the data models creates an opportunity to automate.
-
-When I have a valid JSON Schema, I can create a new Python dataclass with one line of code.
-
+- Are the field names correct?
+- Are the required fields present?
+- Does the input match the datatype expectations set forth by the generated dataclass?
 
 ## License
 
 This codebase is licensed under the GPLv3+ and therefore the use, inclusion, modification, and distribution of this software is governed by the GPL.
 
-If you are planning to use schemamodels in a commercial product or wish to opt-out of the obligations of the GPL, please reach out to license@civichacker.com.
+To opt-out of the obligations of the GPL, inquire about the commercial license by sending an email to: license@civichacker.com.
