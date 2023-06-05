@@ -90,4 +90,4 @@ These basic checks are performed _every time_ you create a new instance of a gen
 
 This codebase is licensed under the GPLv3+ and therefore the use, inclusion, modification, and distribution of this software is governed by the GPL.
 
-This software is the copyright of Civic Hacker, LLC. To opt-out of the obligations of the GPL, reach out to license@civichacker.com.
+To opt-out of the obligations of the GPL, inquire about the commercial license by sending an email to: license@civichacker.com.
