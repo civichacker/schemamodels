@@ -584,5 +584,5 @@ def test_enum_support():
 
     EnumSchema = getattr(lib, 'EnumSchema')
     EnumSchema(handiness="left", brand_name="abcd")
-    with pytest.raises(exceptions.SubSchemaFailureViolation):
+    with pytest.raises(exceptions.ValueTypeViolation):
         EnumSchema(handiness="welp", brand_name="abcde")
