@@ -549,3 +549,40 @@ def test_functor_generator():
     assert next(iter(fn.values()))(1)
     assert any(list(next(iter(fn.values()))(1.0)))
     assert all(list(next(iter(fn.values()))("e")))
+
+
+@pytest.mark.enum
+def test_enum_support():
+    enum = '''
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "enum-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "handiness": {
+                "description": "this is a description",
+                "enum": ["left", "right", "all", "none"],
+                "type": "string"
+            },
+            "brand_name": {
+                "description": "this is a description",
+                "type": "string"
+            }
+        }
+    }
+    '''
+
+    t = json.loads(enum)
+    sm = SchemaModelFactory()
+    sm.register(t)
+
+    lib = importlib.import_module('schemamodels.dynamic')
+
+    assert hasattr(lib, 'EnumSchema')
+
+    EnumSchema = getattr(lib, 'EnumSchema')
+    EnumSchema(handiness="left", brand_name="abcd")
+    with pytest.raises(exceptions.SubSchemaFailureViolation):
+        EnumSchema(handiness="welp", brand_name="abcde")
