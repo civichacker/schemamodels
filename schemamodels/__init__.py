@@ -5,7 +5,7 @@ import sys
 from dataclasses import make_dataclass, field, fields as fs
 from re import sub
 import importlib
-from operator import gt, ge, lt, le, mod, xor, not_
+from operator import gt, ge, lt, le, mod, xor, not_, contains
 from typing import Callable
 
 from functools import partial, reduce
@@ -40,6 +40,7 @@ COMPARISONS = {
     'maximum': lambda d: partial(ge, d),
     'exclusiveMinimum': lambda d: partial(lt, d),
     'exclusiveMaximum': lambda d: partial(gt, d),
+    'enum': lambda d: partial(contains, d),
     'maxLength': lambda d: partial(lambda bound, v: len(v) <= bound, d),
     'minLength': lambda d: partial(lambda bound, v: len(v) >= bound, d),
     'multipleOf': lambda d: partial(lambda d, n: mod(n, d) == 0, d)
@@ -110,6 +111,8 @@ def constraints(dataclass_instance):
         raise e.SubSchemaFailureViolation("at least one subschema failed")
     if len([n for n in nodes if not n.get('type', True)]) > 0:
         raise e.ValueTypeViolation("incorrect type assigned to JSON property")
+    if len([n for n in nodes if not n.get('enum', True)]) > 0:
+        raise e.ValueTypeViolation("string property much use declared enum values")
     if len([n for n in nodes if not n.get('maximum', True)]) > 0:
         raise e.RangeConstraintViolation("violates range contraint")
     if len([n for n in nodes if not n.get('exclusiveMaximum', True)]) > 0:
