@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "schemamodels"
-version = "0.7.0"
+version = "0.8.0"
 description = "Dynamically create useful data classes from JSON schemas"
 authors = ["'Jurnell Cockhren' <jurnell@civichacker.com>"]
 license = "GPL-3.0-or-later"
