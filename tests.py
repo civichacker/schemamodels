@@ -24,6 +24,7 @@ def test_enforce_required():
         "type": "object",
         "properties": {
             "provider_id": {
+              "description": "this is a description",
               "type": "integer"
             },
             "brand_name": {
@@ -59,6 +60,7 @@ def test_immutability():
         "type": "object",
         "properties": {
             "provider_id": {
+              "description": "this is a description",
               "type": "integer"
             },
             "brand_name": {
@@ -88,6 +90,7 @@ def test_default_support():
         "type": "object",
         "properties": {
             "provider_id": {
+              "description": "this is a description",
               "default": 5,
               "type": "integer"
             },
@@ -130,6 +133,7 @@ def test_numeric_range_support():
         "type": "object",
         "properties": {
             "rating": {
+              "description": "this is a description",
               "type": "number",
               "minimum": 0,
               "exclusiveMaximum": 5
@@ -144,6 +148,7 @@ def test_numeric_range_support():
         "type": "object",
         "properties": {
             "rating": {
+              "description": "this is a description",
               "type": "number",
               "exclusiveMinimum": 0,
               "maximum": 5
@@ -178,6 +183,7 @@ def test_numeric_multiple_support():
         "type": "object",
         "properties": {
             "rating": {
+              "description": "this is a description",
               "type": "number",
               "multipleOf": 7
             }
@@ -203,6 +209,7 @@ def test_string_maxlength_support():
         "type": "object",
         "properties": {
             "brand_name": {
+              "description": "this is a description",
               "type": "string",
               "minLength": 2,
               "maxLength": 5
@@ -234,9 +241,11 @@ def test_type_enforcement():
         "type": "object",
         "properties": {
             "provider_id": {
+              "description": "this is a description",
               "type": "integer"
             },
             "brand_name": {
+              "description": "this is a description",
               "type": "string"
             }
         }
@@ -265,9 +274,11 @@ def test_custom_malformed_errorhandler():
         "type": "object",
         "properties": {
             "provider_id": {
+              "description": "this is a description",
               "type": "integer"
             },
             "brand_name": {
+              "description": "this is a description",
               "type": "string"
             }
         }
@@ -297,9 +308,11 @@ def test_custom_malformed_renderer():
         "type": "object",
         "properties": {
             "provider_id": {
+              "description": "this is a description",
               "type": "integer"
             },
             "brand_name": {
+              "description": "this is a description",
               "type": "string"
             }
         }
@@ -328,12 +341,14 @@ def test_anyof_support():
         "type": "object",
         "properties": {
             "provider_id": {
+              "description": "this is a description",
               "anyOf": [
                 {"type": "integer"},
                 {"type": "number"}
               ]
             },
             "brand_name": {
+              "description": "this is a description",
               "type": "string"
             }
         }
@@ -366,9 +381,11 @@ def test_allof_support():
         "type": "object",
         "properties": {
             "provider_id": {
+              "description": "this is a description",
               "type": "integer"
             },
             "brand_name": {
+              "description": "this is a description",
               "allOf": [
                 {"type": "string"},
                 {"maxLength": 5}
@@ -403,12 +420,14 @@ def test_oneof_support():
         "type": "object",
         "properties": {
             "provider_id": {
+              "description": "this is a description",
                 "oneOf": [
                     { "type": "number", "multipleOf": 5 },
                     { "type": "number", "multipleOf": 3 }
                 ]
             },
             "brand_name": {
+              "description": "this is a description",
                 "type": "string"
             }
         }
@@ -441,11 +460,13 @@ def test_not_support():
         "type": "object",
         "properties": {
             "provider_id": {
+              "description": "this is a description",
                 "not": {
                     "type": "string"
                 }
             },
             "brand_name": {
+              "description": "this is a description",
                 "type": "string"
             }
         }
@@ -501,12 +522,14 @@ def test_functor_generator():
         "type": "object",
         "properties": {
             "provider_id": {
+              "description": "this is a description",
               "anyOf": [
                 {"type": "integer"},
                 {"type": "number"}
               ]
             },
             "brand_name": {
+              "description": "this is a description",
               "type": "string"
             }
         }
