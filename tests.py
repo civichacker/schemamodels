@@ -586,3 +586,41 @@ def test_enum_support():
     EnumSchema(handiness="left", brand_name="abcd")
     with pytest.raises(exceptions.ValueTypeViolation):
         EnumSchema(handiness="welp", brand_name="abcde")
+
+
+@pytest.mark.export
+def test_enum_support():
+    enum = '''
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "enum-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "handiness": {
+                "description": "this is a description",
+                "enum": ["left", "right", "all", "none"],
+                "type": "string"
+            },
+            "brand_name": {
+                "description": "this is a description",
+                "type": "string"
+            }
+        }
+    }
+    '''
+
+    t = json.loads(enum)
+    sm = SchemaModelFactory()
+    sm.register(t)
+
+    lib = importlib.import_module('schemamodels.dynamic')
+
+    assert hasattr(lib, 'EnumSchema')
+
+    EnumSchema = getattr(lib, 'EnumSchema')
+    e = EnumSchema(handiness="left", brand_name="abcd")
+    assert e.ascsv() == "left,abcd"
+    assert e.asdict() == {"handiness": "left", "brand_name": "abcd"}
+    assert e.aslist() == ["left", "abcd"]
