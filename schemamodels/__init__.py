@@ -195,9 +195,9 @@ class SchemaModelFactory:
             namespace={
                 '_errorhandler': self.error_handler.apply,
                 '_renderer': self.renderer.apply,
-                'ascsv': lambda self: ",".join(asdict(self).values()),
-                'aslist': lambda self: list(asdict(self).values()),
-                'asdict': lambda self: asdict(self),
+                'tocsv': lambda self: ",".join(asdict(self).values()),
+                'tolist': lambda self: list(asdict(self).values()),
+                'todict': lambda self: asdict(self),
                 '__post_init__': lambda self: constraints(self)._errorhandler(self)._renderer(self)
             })
         if sys.version_info.major == 3 and sys.version_info.minor >= 10:

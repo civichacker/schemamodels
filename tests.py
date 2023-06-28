@@ -621,6 +621,6 @@ def test_enum_support():
 
     EnumSchema = getattr(lib, 'EnumSchema')
     e = EnumSchema(handiness="left", brand_name="abcd")
-    assert e.ascsv() == "left,abcd"
-    assert e.asdict() == {"handiness": "left", "brand_name": "abcd"}
-    assert e.aslist() == ["left", "abcd"]
+    assert e.tocsv() == "left,abcd"
+    assert e.todict() == {"handiness": "left", "brand_name": "abcd"}
+    assert e.tolist() == ["left", "abcd"]
