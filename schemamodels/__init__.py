@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import sys
-from dataclasses import make_dataclass, field, fields as fs
+from dataclasses import make_dataclass, field, fields as fs, asdict
 from re import sub
 import importlib
 from operator import gt, ge, lt, le, mod, xor, not_, contains
@@ -195,6 +195,9 @@ class SchemaModelFactory:
             namespace={
                 '_errorhandler': self.error_handler.apply,
                 '_renderer': self.renderer.apply,
+                'tocsv': lambda self, header=False: f'{",".join(asdict(self).keys())}\n{",".join(asdict(self).values())}' if header else ",".join(asdict(self).values()),
+                'tolist': lambda self: list(asdict(self).values()),
+                'todict': lambda self: asdict(self),
                 '__post_init__': lambda self: constraints(self)._errorhandler(self)._renderer(self)
             })
         if sys.version_info.major == 3 and sys.version_info.minor >= 10:
