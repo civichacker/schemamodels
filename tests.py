@@ -13,6 +13,36 @@ from schemamodels import generate_functors
 import pytest
 
 
+def test_absent_is_not_none():
+    test = '''
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "absent-schema",
+        "description": "",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "description": "this is a description",
+              "type": "integer"
+            },
+            "brand_name": {
+              "type": "string"
+            }
+        }
+    }
+    '''
+    t = json.loads(test)
+    sm = SchemaModelFactory()
+
+    try:
+        assert sm.register(t)
+        from schemamodels.dynamic import AbsentSchema
+    except exceptions.RequiredPropertyViolation:
+        assert False
+
+    AbsentSchema(provider_id=1)
+
 
 def test_enforce_required():
     test = '''
@@ -47,6 +77,7 @@ def test_enforce_required():
 
     with pytest.raises(exceptions.ValueTypeViolation):
         RequiredSchema()
+    with pytest.raises(exceptions.ValueTypeViolation):
         RequiredSchema(provider_id=1)
 
 
@@ -589,7 +620,7 @@ def test_enum_support():
 
 
 @pytest.mark.export
-def test_enum_support():
+def test_export_funcs():
     enum = '''
     {
         "$id": "https://schema.dev/fake-schema.schema.json",

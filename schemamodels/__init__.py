@@ -7,10 +7,24 @@ from re import sub
 import importlib
 from operator import gt, ge, lt, le, mod, xor, not_, contains
 from typing import Callable
+from collections import deque
 
 from functools import partial, reduce
 
 from schemamodels import exceptions as e, bases
+
+
+DEFAULT_FACTORIES = {
+    'string': str,
+    'integer': int,
+    'number': float,
+    'null': None,
+    'boolean': bool,
+    'not': callable,
+    'anyof': callable,
+    'allof': callable,
+    'array': list,
+}
 
 
 JSON_TYPE_MAP = {
@@ -169,17 +183,24 @@ class SchemaModelFactory:
                 field_meta.update({'allOf': partial(functor_eval, funcs)})
             if 'not' in v:
                 field_meta.update({'not': generate_functors(v.get('not'))})
+
             if v.get('type', None):
                 entry += (JSON_TYPE_MAP.get(v.get('type')), )
+                field_spec.update(default_factory=DEFAULT_FACTORIES[v.get('type')])
             else:
+                print('not a built-in')
                 entry += (1, )
+                field_spec.update(default=str)
             if k in required_fields:
                 field_spec.update(init=True)
+                field_spec.update(default_factory=object)
 
             if 'default' in v.keys():
                 field_spec.update(default=v.get('default'))
+                field_spec.pop('default_factory', None)
             else:
-                field_spec.update(default=None)
+                field_spec.pop('default', None)
+
 
             field_meta.update(generate_functors(v))
             field_spec.update(metadata=field_meta)
