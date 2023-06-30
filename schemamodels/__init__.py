@@ -219,7 +219,7 @@ class SchemaModelFactory:
             namespace={
                 '_errorhandler': self.error_handler.apply,
                 '_renderer': self.renderer.apply,
-                'tocsv': lambda self, header=False: f'{",".join(asdict(self).keys())}\n{",".join(asdict(self).values())}' if header else ",".join(asdict(self).values()),
+                'tocsv': lambda self, header=False, fields=schema['properties'].keys(): f'{",".join(fields)}\n{",".join(map(lambda i: asdict(self)[i], fields))}' if header else ",".join(map(lambda i: asdict(self)[i], fields)),
                 'tolist': lambda self: list(asdict(self).values()),
                 'todict': lambda self: asdict(self),
                 '__post_init__': lambda self: constraints(self)._errorhandler(self)._renderer(self)
