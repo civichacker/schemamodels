@@ -162,8 +162,8 @@ class SchemaModelFactory:
             return False
         else:
             klassname = generate_classname(schema.get('title'))
-        fields = list()
-        fields_with_defaults = list()
+        fields = deque()
+        fields_with_defaults = deque()
         required_fields = schema.get('required', [])
         if schema.get('anyOf', None):  # Top-level anyOf
             funcs = [generate_functors(s) for s in schema['anyOf']]
@@ -190,7 +190,6 @@ class SchemaModelFactory:
             else:
                 print('not a built-in')
                 entry += (1, )
-                field_spec.update(default=str)
             if k in required_fields:
                 field_spec.update(init=True)
                 field_spec.update(default_factory=object)
@@ -206,7 +205,11 @@ class SchemaModelFactory:
             field_spec.update(metadata=field_meta)
 
             entry += (field(**field_spec), )
-            fields.append(entry)
+
+            if v.get('type', None):
+                fields.appendleft(entry)
+            else:
+                fields.append(entry)
 
         dklass = partial(
             make_dataclass,
