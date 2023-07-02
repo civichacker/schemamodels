@@ -192,24 +192,22 @@ class SchemaModelFactory:
                 print('not a built-in')
                 entry += (1, )
 
-            if k in required_fields:
-                field_spec.update(init=True)
-                field_spec.update(default_factory=object)
-
             if 'default' in v.keys():
-                field_spec.update(default=v.get('default'))
+                field_spec.update(default=v.get('default', Field))
                 field_spec.pop('default_factory', None)
             else:
-                field_spec.update(default_factory=str)
-                # field_spec.pop('default', None)
-
+                field_spec.update(default_factory=DEFAULT_FACTORIES.get(v.get('type'), str))
 
             field_meta.update(generate_functors(v))
             field_spec.update(metadata=field_meta)
 
+            if k in required_fields:
+                field_spec.update(default_factory=MISSING)
+                field_spec.update(default=MISSING)
+
             entry += (field(**field_spec), )
 
-            print(entry)
+            # print(entry)
             if not hasattr(entry, 'default'):
                 fields.appendleft(entry)
             else:
