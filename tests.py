@@ -78,6 +78,8 @@ def test_enforce_required():
 
 
     req = RequiredSchema(brand_name="wally")
+    assert req.brand_name is not None
+    assert req.brand_name != ''
 
 
     with pytest.raises(TypeError):
