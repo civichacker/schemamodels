@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import sys
-from dataclasses import make_dataclass, field, fields as fs, asdict
+from dataclasses import make_dataclass, field, fields as fs, asdict, Field
+from dataclasses import MISSING
 from re import sub
 import importlib
 from operator import gt, ge, lt, le, mod, xor, not_, contains

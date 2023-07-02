@@ -41,7 +41,8 @@ def test_absent_is_not_none():
     except exceptions.RequiredPropertyViolation:
         assert False
 
-    AbsentSchema(provider_id=1)
+    result = AbsentSchema(provider_id=1)
+    assert result.brand_name is ''
 
 
 def test_enforce_required():
@@ -75,9 +76,13 @@ def test_enforce_required():
     except exceptions.RequiredPropertyViolation:
         assert False
 
-    with pytest.raises(exceptions.ValueTypeViolation):
+
+    req = RequiredSchema(brand_name="wally")
+
+
+    with pytest.raises(TypeError):
         RequiredSchema()
-    with pytest.raises(exceptions.ValueTypeViolation):
+    with pytest.raises(TypeError):
         RequiredSchema(provider_id=1)
 
 
