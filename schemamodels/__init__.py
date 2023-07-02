@@ -2,15 +2,30 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import sys
-from dataclasses import make_dataclass, field, fields as fs, asdict
+from dataclasses import make_dataclass, field, fields as fs, asdict, Field
+from dataclasses import MISSING
 from re import sub
 import importlib
 from operator import gt, ge, lt, le, mod, xor, not_, contains
 from typing import Callable
+from collections import deque
 
 from functools import partial, reduce
 
 from schemamodels import exceptions as e, bases
+
+
+DEFAULT_FACTORIES = {
+    'string': str,
+    'integer': int,
+    'number': float,
+    'null': None,
+    'boolean': bool,
+    'not': callable,
+    'anyof': callable,
+    'allof': callable,
+    'array': list,
+}
 
 
 JSON_TYPE_MAP = {
@@ -148,8 +163,8 @@ class SchemaModelFactory:
             return False
         else:
             klassname = generate_classname(schema.get('title'))
-        fields = list()
-        fields_with_defaults = list()
+        fields = deque()
+        fields_with_defaults = deque()
         required_fields = schema.get('required', [])
         if schema.get('anyOf', None):  # Top-level anyOf
             funcs = [generate_functors(s) for s in schema['anyOf']]
@@ -169,23 +184,34 @@ class SchemaModelFactory:
                 field_meta.update({'allOf': partial(functor_eval, funcs)})
             if 'not' in v:
                 field_meta.update({'not': generate_functors(v.get('not'))})
+
             if v.get('type', None):
                 entry += (JSON_TYPE_MAP.get(v.get('type')), )
+                field_spec.update(default_factory=DEFAULT_FACTORIES[v.get('type')])
             else:
+                print('not a built-in')
                 entry += (1, )
-            if k in required_fields:
-                field_spec.update(init=True)
 
             if 'default' in v.keys():
-                field_spec.update(default=v.get('default'))
+                field_spec.update(default=v.get('default', Field))
+                field_spec.pop('default_factory', None)
             else:
-                field_spec.update(default=None)
+                field_spec.update(default_factory=DEFAULT_FACTORIES.get(v.get('type'), str))
 
             field_meta.update(generate_functors(v))
             field_spec.update(metadata=field_meta)
 
+            if k in required_fields:
+                field_spec.update(default_factory=MISSING)
+                field_spec.update(default=MISSING)
+
             entry += (field(**field_spec), )
-            fields.append(entry)
+
+            # print(entry)
+            if not hasattr(entry, 'default'):
+                fields.appendleft(entry)
+            else:
+                fields.append(entry)
 
         dklass = partial(
             make_dataclass,
@@ -195,7 +221,7 @@ class SchemaModelFactory:
             namespace={
                 '_errorhandler': self.error_handler.apply,
                 '_renderer': self.renderer.apply,
-                'tocsv': lambda self, header=False: f'{",".join(asdict(self).keys())}\n{",".join(asdict(self).values())}' if header else ",".join(asdict(self).values()),
+                'tocsv': lambda self, header=False, fields=schema['properties'].keys(): f'{",".join(fields)}\n{",".join(map(lambda i: asdict(self)[i], fields))}' if header else ",".join(map(lambda i: asdict(self)[i], fields)),
                 'tolist': lambda self: list(asdict(self).values()),
                 'todict': lambda self: asdict(self),
                 '__post_init__': lambda self: constraints(self)._errorhandler(self)._renderer(self)

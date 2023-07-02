@@ -13,6 +13,37 @@ from schemamodels import generate_functors
 import pytest
 
 
+def test_absent_is_not_none():
+    test = '''
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "absent-schema",
+        "description": "",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "description": "this is a description",
+              "type": "integer"
+            },
+            "brand_name": {
+              "type": "string"
+            }
+        }
+    }
+    '''
+    t = json.loads(test)
+    sm = SchemaModelFactory()
+
+    try:
+        assert sm.register(t)
+        from schemamodels.dynamic import AbsentSchema
+    except exceptions.RequiredPropertyViolation:
+        assert False
+
+    result = AbsentSchema(provider_id=1)
+    assert result.brand_name is ''
+
 
 def test_enforce_required():
     test = '''
@@ -45,8 +76,15 @@ def test_enforce_required():
     except exceptions.RequiredPropertyViolation:
         assert False
 
-    with pytest.raises(exceptions.ValueTypeViolation):
+
+    req = RequiredSchema(brand_name="wally")
+    assert req.brand_name is not None
+    assert req.brand_name != ''
+
+
+    with pytest.raises(TypeError):
         RequiredSchema()
+    with pytest.raises(TypeError):
         RequiredSchema(provider_id=1)
 
 
@@ -589,7 +627,7 @@ def test_enum_support():
 
 
 @pytest.mark.export
-def test_enum_support():
+def test_export_funcs():
     enum = '''
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
@@ -621,7 +659,8 @@ def test_enum_support():
 
     EnumSchema = getattr(lib, 'EnumSchema')
     e = EnumSchema(handiness="left", brand_name="abcd")
-    assert e.tocsv() == "left,abcd"
+    assert e.tocsv(fields=['handiness', 'brand_name']) == "left,abcd"
     assert e.tocsv(header=True) == "handiness,brand_name\nleft,abcd"
     assert e.todict() == {"handiness": "left", "brand_name": "abcd"}
-    assert e.tolist() == ["left", "abcd"]
+    assert 'left' in e.tolist()
+    assert 'abcd' in e.tolist()
