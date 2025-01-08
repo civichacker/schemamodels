@@ -13,3 +13,4 @@ tox.ini
 pytest.ini
 .coverage
 *.json
+.env
