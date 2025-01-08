@@ -103,36 +103,45 @@ class SchemaModelFactory:
         self.error_handler()
         self.renderer()
 
-    def register(self, schema: dict) -> bool:
-        reqkws = {'title', 'type', 'properties'}
-        if not reqkws <= schema.keys() or schema.get('type', None) != 'object':
-            return False
-        else:
-            klassname = generate_classname(schema.get('title'))
+    def construct_dataclass(self, klassname: str, fields: Deque, fields_with_defaults: Deque) -> Callable:
+        return partial(
+            make_dataclass,
+            klassname,
+            fields + fields_with_defaults,
+            frozen=True,
+            namespace={
+                '_errorhandler': self.error_handler.apply,
+                '_renderer': self.renderer.apply,
+                '__post_init__': lambda self: self._errorhandler(self)._renderer(self)
+            })
+
+    def process_subschema(self, subschema: dict, values: dict) -> dict:
+        funcs = [generate_functors(s) for s in values[subschema]]
+        return {subschema: partial(functor_eval, funcs)}
+
+    def process_object(self, schema: dict, required_fields: list = []) -> None:
         fields = deque()
         fields_with_defaults = deque()
-        required_fields = schema.get('required', [])
-        if schema.get('anyOf', None):  # Top-level anyOf
-            funcs = [generate_functors(s) for s in schema['anyOf']]
-            # Do something with this
         for k, v in schema['properties'].items():
             field_spec = dict()
             field_meta = dict()
             entry = (k, )
+
             if 'anyOf' in v:
-                funcs = [generate_functors(s) for s in v['anyOf']]
-                field_meta.update({'anyOf': partial(functor_eval, funcs)})
+                field_meta.update(self.process_subschema('anyOf', v))
             if 'oneOf' in v:
-                funcs = [generate_functors(s) for s in v['oneOf']]
-                field_meta.update({'oneOf': partial(functor_eval, funcs)})
+                field_meta.update(self.process_subschema('oneOf', v))
             if 'allOf' in v:
-                funcs = [generate_functors(s) for s in v['allOf']]
-                field_meta.update({'allOf': partial(functor_eval, funcs)})
+                field_meta.update(self.process_subschema('allOf', v))
             if 'not' in v:
                 field_meta.update({'not': generate_functors(v.get('not'))})
 
-            if v.get('type', None):
+            if v.get('type', None) and v.get('type') != 'object':
                 entry += (JSON_TYPE_MAP.get(v.get('type')), )
+                field_spec.update(default_factory=DEFAULT_FACTORIES[v.get('type')])
+            elif v.get('type') == 'object':
+                fs, fswd = self.process_object(v.get('properties'))
+                entry += (k, fs)
                 field_spec.update(default_factory=DEFAULT_FACTORIES[v.get('type')])
             else:
                 print('not a built-in')
@@ -153,25 +162,26 @@ class SchemaModelFactory:
 
             entry += (field(**field_spec), )
 
-            # print(entry)
             if not hasattr(entry, 'default'):
                 fields.appendleft(entry)
             else:
                 fields.append(entry)
 
-        dklass = partial(
-            make_dataclass,
+        return (fields, fields_with_defaults)
+
+    def register(self, schema: dict) -> bool:
+        if not utils.is_schema_toplevel_object(schema):
+            raise e.MalformedSchemaViolation()
+
+        klassname = utils.generate_classname(schema.get('title'))
+        required_fields = schema.get('required', [])
+
+        fields, fields_with_defaults = self.process_object(schema, required_fields=required_fields)
+        dklass = self.construct_dataclass(
             klassname,
-            fields + fields_with_defaults,
-            frozen=True,
-            namespace={
-                '_errorhandler': self.error_handler.apply,
-                '_renderer': self.renderer.apply,
-                'tocsv': lambda self, header=False, fields=schema['properties'].keys(): f'{",".join(fields)}\n{",".join(map(lambda i: asdict(self)[i], fields))}' if header else ",".join(map(lambda i: asdict(self)[i], fields)),
-                'tolist': lambda self: list(asdict(self).values()),
-                'todict': lambda self: asdict(self),
-                '__post_init__': lambda self: constraints(self)._errorhandler(self)._renderer(self)
-            })
+            fields,
+            fields_with_defaults
+        )
         if sys.version_info.major == 3 and sys.version_info.minor >= 10:
             dataklass = dklass(slots=True)
         else:
