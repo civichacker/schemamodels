@@ -7,6 +7,9 @@ class SchemaViolation(Exception): pass
 class RangeConstraintViolation(SchemaViolation): pass
 
 
+class MalformedSchemaViolation(SchemaViolation): pass
+
+
 class LengthConstraintViolation(SchemaViolation): pass
 
 
