@@ -21,7 +21,7 @@ jobs:
   code coverage over 90:
     executor: python/default
     docker:
-      - image: cimg/python:3.8
+      - image: cimg/python:3.9
     steps:
       - checkout
       - python/install-packages:
@@ -32,7 +32,7 @@ jobs:
   lint:
     executor: python/default
     docker:
-      - image: cimg/python:3.8
+      - image: cimg/python:3.9
     steps:
       - checkout
       - python/install-packages:
@@ -41,7 +41,7 @@ jobs:
   unused code check:
     executor: python/default
     docker:
-      - image: cimg/python:3.8
+      - image: cimg/python:3.9
     steps:
       - checkout
       - python/install-packages:
@@ -50,7 +50,7 @@ jobs:
   fsf compliance:
     executor: python/default
     docker:
-      - image: cimg/python:3.8
+      - image: cimg/python:3.9
     steps:
       - checkout
       - python/install-packages:
@@ -64,7 +64,7 @@ workflows:
       - python:
           matrix:
             parameters:
-              version: ["3.8", "3.9", "3.10", "3.11"]
+              version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
   linting:
     jobs:
       - lint
