@@ -2,86 +2,67 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import sys
-from dataclasses import make_dataclass, field, fields as fs, asdict, Field
+from dataclasses import make_dataclass, field, fields as fs, Field
 from dataclasses import MISSING
-from re import sub
 import importlib
-from operator import gt, ge, lt, le, mod, xor, not_, contains
-from typing import Callable
+from operator import xor, not_
+from typing import Callable, Deque
 from collections import deque
 
 from functools import partial, reduce
 
-from schemamodels import exceptions as e, bases
-
-
-DEFAULT_FACTORIES = {
-    'string': str,
-    'integer': int,
-    'number': float,
-    'null': None,
-    'boolean': bool,
-    'not': callable,
-    'anyof': callable,
-    'allof': callable,
-    'array': list,
-}
-
-
-JSON_TYPE_MAP = {
-    'string': lambda d: isinstance(d, str),
-    'integer': lambda d: isinstance(d, int),
-    'number': lambda d: isinstance(d, (float, int)),
-    'null': lambda d: d is None,
-    'boolean': lambda d: isinstance(d, bool),
-    'array': lambda d: isinstance(d, (list, tuple)),
-}
-
-PORCELINE_KEYWORDS = ['value', 'default', 'anyOf', 'allOf', 'oneOf', 'not', 'description']
-
-COMPARISONS = {
-    'type': lambda d: JSON_TYPE_MAP[d],
-    'anyOf': lambda d: partial(lambda struct: generate_functors(struct), d),
-    'allOf': lambda d: partial(lambda struct: generate_functors(struct), d),
-    'oneOf': lambda d: partial(lambda struct: generate_functors(struct), d),
-    'not': lambda d: not_(d),
-    'string': lambda d: isinstance(d, str),
-    'integer': lambda d: isinstance(d, int),
-    'number': lambda d: isinstance(d, (float, int)),
-    'null': lambda d: d is None,
-    'boolean': lambda d: isinstance(d, bool),
-    'array': lambda d: isinstance(d, (list, tuple)),
-    'minimum': lambda d: partial(le, d),
-    'maximum': lambda d: partial(ge, d),
-    'exclusiveMinimum': lambda d: partial(lt, d),
-    'exclusiveMaximum': lambda d: partial(gt, d),
-    'enum': lambda d: partial(contains, d),
-    'maxLength': lambda d: partial(lambda bound, v: len(v) <= bound, d),
-    'minLength': lambda d: partial(lambda bound, v: len(v) >= bound, d),
-    'multipleOf': lambda d: partial(lambda d, n: mod(n, d) == 0, d)
-}
+from schemamodels import exceptions as e, bases, utils
+from schemamodels.constants import COMPARISONS, PORCELINE_KEYWORDS, JSON_TYPE_MAP, DEFAULT_FACTORIES
 
 
 class DefaultErrorHandler(bases.BaseErrorHandler):
 
     @classmethod
-    def apply(cls, f: Callable) -> Callable:
-        return f
+    def apply(cls, instance: object) -> object:
+        fields_with_metadata = filter(lambda f: f.metadata != {}, fs(instance))
+        final_form = list(map(lambda f: {'value': getattr(instance,  f.name), 'name': f.name, 'metadata': f.metadata}, fields_with_metadata))
+
+        nodes = process_functors(final_form)
+
+        if len([n for n in nodes if not n.get('not', True)]) > 0:
+            raise e.SubSchemaFailureViolation("subschema failed")
+        if len([n for n in nodes if not n.get('oneOf', True)]) > 0:
+            raise e.SubSchemaFailureViolation("none or multiple of the subschemas failed")
+        if len([n for n in nodes if not n.get('anyOf', True)]) > 0:
+            raise e.SubSchemaFailureViolation("all of the subschemas failed")
+        if len([n for n in nodes if not n.get('allOf', True)]) > 0:
+            raise e.SubSchemaFailureViolation("at least one subschema failed")
+        if len([n for n in nodes if not n.get('type', True)]) > 0:
+            raise e.ValueTypeViolation("incorrect type assigned to JSON property")
+        if len([n for n in nodes if not n.get('enum', True)]) > 0:
+            raise e.ValueTypeViolation("string property much use declared enum values")
+        if len([n for n in nodes if not n.get('maximum', True)]) > 0:
+            raise e.RangeConstraintViolation("violates range contraint")
+        if len([n for n in nodes if not n.get('exclusiveMaximum', True)]) > 0:
+            raise e.RangeConstraintViolation("violates range contraint")
+        if len([n for n in nodes if not n.get('exclusiveMinimum', True)]) > 0:
+            raise e.RangeConstraintViolation("violates range contraint")
+        if len([n for n in nodes if not n.get('minimum', True)]) > 0:
+            raise e.RangeConstraintViolation("violates range contraint")
+        if len([n for n in nodes if not n.get('multipleOf', True)]) > 0:
+            raise e.RangeConstraintViolation("violates range contraint")
+        if len([n for n in nodes if not n.get('maxLength', True)]) > 0:
+            raise e.LengthConstraintViolation("violates length contraint")
+        if len([n for n in nodes if not n.get('minLength', True)]) > 0:
+            raise e.LengthConstraintViolation("violates length contraint")
+        return instance
 
 
 class DefaultRenderer(bases.BaseRenderer):
 
     @classmethod
-    def apply(cls, f: Callable) -> Callable:
-        return f
-
-
-def generate_classname(title: str) -> str:
-    return sub(r'(-|_)+', '', title.title())
+    def apply(cls, instance: object) -> object:
+        return instance
 
 
 def generate_functors(struct):
-    return {k: COMPARISONS[k](v) for k, v in struct.items() if k not in PORCELINE_KEYWORDS}
+    o = {k: COMPARISONS[k](v) for k, v in struct.items() if k not in PORCELINE_KEYWORDS}
+    return bases.CoreModel(o)
 
 
 def process_functors(nodes):
@@ -108,41 +89,6 @@ def process_functors(nodes):
 
 def functor_eval(functors: Callable, value):
     return [{f: func[f](value) for f in func} for func in functors]
-
-
-def constraints(dataclass_instance):
-    fields_with_metadata = filter(lambda f: f.metadata != {}, fs(dataclass_instance))
-    final_form = list(map(lambda f: {'value': getattr(dataclass_instance,  f.name), 'name': f.name, 'metadata': f.metadata}, fields_with_metadata))
-
-    nodes = process_functors(final_form)
-
-    if len([n for n in nodes if not n.get('not', True)]) > 0:
-        raise e.SubSchemaFailureViolation("subschema failed")
-    if len([n for n in nodes if not n.get('oneOf', True)]) > 0:
-        raise e.SubSchemaFailureViolation("none or multiple of the subschemas failed")
-    if len([n for n in nodes if not n.get('anyOf', True)]) > 0:
-        raise e.SubSchemaFailureViolation("all of the subschemas failed")
-    if len([n for n in nodes if not n.get('allOf', True)]) > 0:
-        raise e.SubSchemaFailureViolation("at least one subschema failed")
-    if len([n for n in nodes if not n.get('type', True)]) > 0:
-        raise e.ValueTypeViolation("incorrect type assigned to JSON property")
-    if len([n for n in nodes if not n.get('enum', True)]) > 0:
-        raise e.ValueTypeViolation("string property much use declared enum values")
-    if len([n for n in nodes if not n.get('maximum', True)]) > 0:
-        raise e.RangeConstraintViolation("violates range contraint")
-    if len([n for n in nodes if not n.get('exclusiveMaximum', True)]) > 0:
-        raise e.RangeConstraintViolation("violates range contraint")
-    if len([n for n in nodes if not n.get('exclusiveMinimum', True)]) > 0:
-        raise e.RangeConstraintViolation("violates range contraint")
-    if len([n for n in nodes if not n.get('minimum', True)]) > 0:
-        raise e.RangeConstraintViolation("violates range contraint")
-    if len([n for n in nodes if not n.get('multipleOf', True)]) > 0:
-        raise e.RangeConstraintViolation("violates range contraint")
-    if len([n for n in nodes if not n.get('maxLength', True)]) > 0:
-        raise e.LengthConstraintViolation("violates length contraint")
-    if len([n for n in nodes if not n.get('minLength', True)]) > 0:
-        raise e.LengthConstraintViolation("violates length contraint")
-    return dataclass_instance
 
 
 class SchemaModelFactory:
