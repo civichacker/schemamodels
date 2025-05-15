@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import sys
-from dataclasses import make_dataclass, field, fields as fs, Field
+from dataclasses import make_dataclass, field, fields as fs, asdict, Field
 from dataclasses import MISSING
 import importlib
 from operator import xor, not_
@@ -103,7 +103,7 @@ class SchemaModelFactory:
         self.error_handler()
         self.renderer()
 
-    def construct_dataclass(self, klassname: str, fields: Deque, fields_with_defaults: Deque) -> Callable:
+    def construct_dataclass(self, klassname: str, schema: dict, fields: Deque, fields_with_defaults: Deque) -> Callable:
         return partial(
             make_dataclass,
             klassname,
@@ -112,6 +112,9 @@ class SchemaModelFactory:
             namespace={
                 '_errorhandler': self.error_handler.apply,
                 '_renderer': self.renderer.apply,
+                'tocsv': lambda self, header=False, fields=schema['properties'].keys(): f'{",".join(fields)}\n{",".join(map(lambda i: asdict(self)[i], fields))}' if header else ",".join(map(lambda i: asdict(self)[i], fields)),
+                 'tolist': lambda self: list(asdict(self).values()),
+                'todict': lambda self: asdict(self),
                 '__post_init__': lambda self: self._errorhandler(self)._renderer(self)
             })
 
@@ -179,6 +182,7 @@ class SchemaModelFactory:
         fields, fields_with_defaults = self.process_object(schema, required_fields=required_fields)
         dklass = self.construct_dataclass(
             klassname,
+            schema,
             fields,
             fields_with_defaults
         )
