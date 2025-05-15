@@ -2,7 +2,7 @@ import json
 import pytest
 
 
-@pytest.fixture
+@pytest.fixture(scope="session", autouse=True)
 def simple_schema():
     test = '''
     {
@@ -25,7 +25,7 @@ def simple_schema():
     yield json.loads(test)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session", autouse=True)
 def malformed_schema():
     test = '''
     {
@@ -39,7 +39,7 @@ def malformed_schema():
     yield json.loads(test)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session", autouse=True)
 def required_fields_schema():
     test = '''
     {
@@ -64,7 +64,7 @@ def required_fields_schema():
     yield json.loads(test)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session", autouse=True)
 def default_value_schema():
     test = '''
     {
@@ -88,7 +88,7 @@ def default_value_schema():
     yield json.loads(test)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session", autouse=True)
 def enum_field_schema():
     enum = '''
     {
