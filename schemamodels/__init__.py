@@ -11,7 +11,7 @@ from collections import deque
 
 from functools import partial, reduce
 
-from schemamodels import exceptions as e, bases, utils
+from schemamodels import exceptions as e, bases, utils, v2
 from schemamodels.constants import COMPARISONS, PORCELINE_KEYWORDS, JSON_TYPE_MAP, DEFAULT_FACTORIES
 
 
@@ -122,7 +122,7 @@ class SchemaModelFactory:
         funcs = [generate_functors(s) for s in values[subschema]]
         return {subschema: partial(functor_eval, funcs)}
 
-    def process_object(self, schema: dict, required_fields: list = []) -> None:
+    def process_object(self, schema: dict, required_fields: list = []) -> tuple:
         fields = deque()
         fields_with_defaults = deque()
         for k, v in schema['properties'].items():
@@ -193,4 +193,110 @@ class SchemaModelFactory:
         setattr(self.dmod,
                 klassname,
                 dataklass)
+        return True
+
+class SchemaModelFactoryV2(SchemaModelFactory):
+
+    MAP_TTYPE = {
+        'string': bases.StringDescriptor,
+        'number': bases.NumberDescriptor,
+        'integer': bases.NumberDescriptor,
+        'null': None,
+        'boolean': bases.BooleanDescriptor,
+        'array': (list, tuple),
+    }
+
+    def process_object(self, schema: dict, required_fields: list = []) -> tuple:
+        fields = deque()
+        fields_with_defaults = deque()
+
+        '''
+        for k, v in schema['properties'].items():
+            field_spec = dict()
+            field_meta = dict()
+            entry = (k, )
+
+            if 'anyOf' in v:
+                field_meta.update(self.process_subschema('anyOf', v))
+            if 'oneOf' in v:
+                field_meta.update(self.process_subschema('oneOf', v))
+            if 'allOf' in v:
+                field_meta.update(self.process_subschema('allOf', v))
+            if 'not' in v:
+                field_meta.update({'not': generate_functors(v.get('not'))})
+
+            if v.get('type', None) and v.get('type') != 'object':
+                entry += (JSON_TYPE_MAP.get(v.get('type')), )
+                field_spec.update(default_factory=DEFAULT_FACTORIES[v.get('type')])
+            elif v.get('type') == 'object':
+                fs, fswd = self.process_object(v.get('properties'))
+                entry += (k, fs)
+                field_spec.update(default_factory=DEFAULT_FACTORIES[v.get('type')])
+            else:
+                print('not a built-in')
+                entry += (1, )
+
+            if 'default' in v.keys():
+                field_spec.update(default=v.get('default', Field))
+                field_spec.pop('default_factory', None)
+            else:
+                field_spec.update(default_factory=DEFAULT_FACTORIES.get(v.get('type'), str))
+
+            field_meta.update(generate_functors(v))
+            field_spec.update(metadata=field_meta)
+
+            if k in required_fields:
+                field_spec.update(default_factory=MISSING)
+                field_spec.update(default=MISSING)
+
+            entry += (field(**field_spec), )
+
+            if not hasattr(entry, 'default'):
+                fields.appendleft(entry)
+            else:
+                fields.append(entry)
+        '''
+
+        for k, v in schema['properties'].items():
+            field_spec = dict()
+            field_meta = dict()
+            entry = (k, )
+
+            if v.get('type', None) and v.get('type') != 'object':
+                ttype = self.MAP_TTYPE.get(v.get('type'))
+
+                for guard, operation in ttype.COMPARISONS.items():
+                    if guard in v.keys():
+                        field_meta.update({guard: v.get(guard)})
+
+
+                fields.append((k, ttype, ttype(
+                    default=v.get('default', None),
+                    metadata=field_meta
+                )))
+            else:
+                print('not a built-in')
+                entry += (1, )
+
+
+        return (fields, fields_with_defaults)
+
+    def register(self, schema: dict) -> bool:
+        if not utils.is_schema_toplevel_object(schema):
+            raise e.MalformedSchemaViolation()
+
+        klassname = utils.generate_classname(schema.get('title'))
+        required_fields = schema.get('required', [])
+
+        fields, fields_with_defaults = self.process_object(schema, required_fields=required_fields)
+        #print(fields)
+
+        dklass = make_dataclass(
+            klassname,
+            fields + fields_with_defaults,
+            frozen=True,
+            )
+        setattr(self.dmod,
+                klassname,
+                dklass)
         return True
