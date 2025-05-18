@@ -13,7 +13,7 @@ from schemamodels import generate_functors
 import pytest
 
 
-def test_absent_is_not_none():
+def test_absent_is_not_none(Factory):
     test = '''
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
@@ -33,7 +33,7 @@ def test_absent_is_not_none():
     }
     '''
     t = json.loads(test)
-    sm = SchemaModelFactory()
+    sm = Factory()
 
     try:
         assert sm.register(t)
@@ -45,9 +45,9 @@ def test_absent_is_not_none():
     assert result.brand_name == ''
 
 
-def test_enforce_required(required_fields_schema):
+def test_enforce_required(required_fields_schema, Factory):
     importlib.import_module('schemamodels.dynamic')
-    sm = SchemaModelFactory()
+    sm = Factory()
     validators.Draft202012Validator.check_schema(required_fields_schema)
 
     try:
@@ -66,7 +66,7 @@ def test_enforce_required(required_fields_schema):
         RequiredSchema(provider_id=1)
 
 
-def test_immutability():
+def test_immutability(Factory):
     test = '''
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
@@ -86,7 +86,7 @@ def test_immutability():
     }
     '''
     t = json.loads(test)
-    sm = SchemaModelFactory()
+    sm = Factory()
     sm.register(t)
 
     from schemamodels.dynamic import ImmutableSchema
@@ -96,8 +96,8 @@ def test_immutability():
         fs.provider_id = 3
 
 
-def test_default_support(default_value_schema):
-    sm = SchemaModelFactory()
+def test_default_support(default_value_schema, Factory):
+    sm = Factory()
     sm.register(default_value_schema)
 
     from schemamodels.dynamic import DefaultSchema
@@ -107,7 +107,7 @@ def test_default_support(default_value_schema):
 
 
 @pytest.mark.range
-def test_numeric_range_support():
+def test_numeric_range_support(Factory):
     inclusive_range = '''
     {
         "title": "inclusive-range",
@@ -155,7 +155,7 @@ def test_numeric_range_support():
     irange = json.loads(inclusive_range)
     emaxrange = json.loads(exclusive_max_range)
     eminrange = json.loads(exclusive_min_range)
-    sm = SchemaModelFactory(schemas=[eminrange, emaxrange])
+    sm = Factory(schemas=[eminrange, emaxrange])
     sm.register(irange)
 
     from schemamodels.dynamic import InclusiveRange, ExclusiveMaxRange, ExclusiveMinRange
@@ -171,7 +171,7 @@ def test_numeric_range_support():
 
 
 @pytest.mark.multi
-def test_numeric_multiple_support():
+def test_numeric_multiple_support(Factory):
     multipleof = '''
     {
         "title": "multiple-of",
@@ -187,7 +187,7 @@ def test_numeric_multiple_support():
     }
     '''
     multi = json.loads(multipleof)
-    sm = SchemaModelFactory()
+    sm = Factory()
     sm.register(multi)
 
     from schemamodels.dynamic import MultipleOf
@@ -197,7 +197,7 @@ def test_numeric_multiple_support():
 
 
 @pytest.mark.string
-def test_string_maxlength_support():
+def test_string_maxlength_support(Factory):
     maxlength = '''
     {
         "title": "max-length",
@@ -214,7 +214,7 @@ def test_string_maxlength_support():
     }
     '''
     multi = json.loads(maxlength)
-    sm = SchemaModelFactory()
+    sm = Factory()
     sm.register(multi)
 
     from schemamodels.dynamic import MaxLength
@@ -227,7 +227,7 @@ def test_string_maxlength_support():
 
 
 @pytest.mark.type
-def test_type_enforcement():
+def test_type_enforcement(Factory):
     test = '''
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
@@ -248,7 +248,7 @@ def test_type_enforcement():
     }
     '''
     t = json.loads(test)
-    sm = SchemaModelFactory()
+    sm = Factory()
     sm.register(t)
 
     from schemamodels.dynamic import TypeSchema
@@ -260,7 +260,7 @@ def test_type_enforcement():
 
 
 @pytest.mark.custom
-def test_custom_malformed_errorhandler():
+def test_custom_malformed_errorhandler(Factory):
     test = '''
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
@@ -287,14 +287,14 @@ def test_custom_malformed_errorhandler():
     json.loads(test)
 
     with pytest.raises(TypeError):
-        SchemaModelFactory(error_handler=MyCustomErrorHandler)
+        Factory(error_handler=MyCustomErrorHandler)
 
     lib = importlib.import_module('schemamodels.dynamic')
     assert not hasattr(lib, 'FakeSchema')
 
 
 @pytest.mark.custom
-def test_custom_malformed_renderer():
+def test_custom_malformed_renderer(Factory):
     test = '''
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
@@ -320,14 +320,14 @@ def test_custom_malformed_renderer():
 
     json.loads(test)
     with pytest.raises(TypeError):
-        SchemaModelFactory(renderer=MyCustomRenderer)
+        Factory(renderer=MyCustomRenderer)
 
     lib = importlib.import_module('schemamodels.dynamic')
     assert not hasattr(lib, 'FakeSchema')
 
 
 @pytest.mark.anyof
-def test_anyof_support():
+def test_anyof_support(Factory):
     anyof = '''
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
@@ -352,7 +352,7 @@ def test_anyof_support():
     '''
 
     t = json.loads(anyof)
-    sm = SchemaModelFactory()
+    sm = Factory()
     sm.register(t)
 
     lib = importlib.import_module('schemamodels.dynamic')
@@ -367,7 +367,7 @@ def test_anyof_support():
 
 
 @pytest.mark.allof
-def test_allof_support():
+def test_allof_support(Factory):
     allof = '''
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
@@ -392,7 +392,7 @@ def test_allof_support():
     '''
 
     t = json.loads(allof)
-    sm = SchemaModelFactory()
+    sm = Factory()
     sm.register(t)
 
     lib = importlib.import_module('schemamodels.dynamic')
@@ -406,7 +406,7 @@ def test_allof_support():
 
 
 @pytest.mark.oneof
-def test_oneof_support():
+def test_oneof_support(Factory):
     oneof = '''
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
@@ -431,7 +431,7 @@ def test_oneof_support():
     '''
 
     t = json.loads(oneof)
-    sm = SchemaModelFactory()
+    sm = Factory()
     sm.register(t)
 
     lib = importlib.import_module('schemamodels.dynamic')
@@ -446,7 +446,7 @@ def test_oneof_support():
 
 
 @pytest.mark.not_
-def test_not_support():
+def test_not_support(Factory):
     _not = '''
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
@@ -470,7 +470,7 @@ def test_not_support():
     '''
 
     t = json.loads(_not)
-    sm = SchemaModelFactory()
+    sm = Factory()
     sm.register(t)
 
     lib = importlib.import_module('schemamodels.dynamic')
@@ -508,7 +508,7 @@ def test_range_minmax_comparison():
 
 
 @pytest.mark.cell
-def test_functor_generator():
+def test_functor_generator(Factory):
     anyof = '''
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
@@ -548,7 +548,7 @@ def test_functor_generator():
 
 
 @pytest.mark.enum
-def test_enum_support():
+def test_enum_support(Factory):
     enum = '''
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
@@ -571,7 +571,7 @@ def test_enum_support():
     '''
 
     t = json.loads(enum)
-    sm = SchemaModelFactory()
+    sm = Factory()
     sm.register(t)
 
     lib = importlib.import_module('schemamodels.dynamic')
@@ -586,8 +586,8 @@ def test_enum_support():
 
 @pytest.mark.skip
 @pytest.mark.export
-def test_export_funcs(enum_field_schema):
-    sm = SchemaModelFactory()
+def test_export_funcs(enum_field_schema, Factory):
+    sm = Factory()
     sm.register(enum_field_schema)
 
     lib = importlib.import_module('schemamodels.dynamic')
@@ -604,9 +604,9 @@ def test_export_funcs(enum_field_schema):
 
 
 @pytest.mark.object
-def test_simple_object_support(simple_schema):
+def test_simple_object_support(simple_schema, Factory):
 
-    sm = SchemaModelFactory()
+    sm = Factory()
     fs, fs_w_d = sm.process_object(simple_schema)
     print(fs, fs_w_d)
     sm.register(simple_schema)
