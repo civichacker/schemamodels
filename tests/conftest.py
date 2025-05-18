@@ -1,5 +1,6 @@
 import json
 import pytest
+from schemamodels import SchemaModelFactoryV2, SchemaModelFactory
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -111,3 +112,9 @@ def enum_field_schema():
     }
     '''
     yield json.loads(enum)
+
+
+
+@pytest.fixture(scope="session", autouse=True, params=[SchemaModelFactory, SchemaModelFactoryV2])
+def Factory(request):
+    yield request.param
