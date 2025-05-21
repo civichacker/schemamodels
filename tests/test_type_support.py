@@ -4,9 +4,9 @@
 from jsonschema import validators
 import json
 import importlib
-from dataclasses import make_dataclass, FrozenInstanceError
+from dataclasses import FrozenInstanceError
 
-from schemamodels import SchemaModelFactory, exceptions, bases, COMPARISONS
+from schemamodels import exceptions, bases, COMPARISONS
 from schemamodels import generate_functors
 
 

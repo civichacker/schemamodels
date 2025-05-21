@@ -1,6 +1,6 @@
 import pytest
-from schemamodels import exceptions, bases, COMPARISONS
-from schemamodels import generate_functors, utils
+from schemamodels import exceptions
+from schemamodels import utils
 
 
 @pytest.mark.struct
