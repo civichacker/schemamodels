@@ -265,8 +265,6 @@ class SchemaModelFactoryV2(SchemaModelFactory):
                 fields.append((k, ttype, ttype(
                     metadata=field_meta
                 )))
-                print(entry)
-
 
             if v.get('type', None) and v.get('type') != 'object':
                 ttype = self.MAP_TTYPE.get(v.get('type'))
@@ -295,7 +293,6 @@ class SchemaModelFactoryV2(SchemaModelFactory):
         required_fields = schema.get('required', [])
 
         fields, fields_with_defaults = self.process_object(schema, required_fields=required_fields)
-        #print(fields)
 
         dklass = make_dataclass(
             klassname,
