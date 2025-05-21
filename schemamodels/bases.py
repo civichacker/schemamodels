@@ -2,9 +2,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from abc import ABC, abstractmethod
-from collections import deque, UserList
-from functools import partial, reduce, partialmethod
-from typing import Callable, Protocol, TypeVar, Generic, AnyStr, get_args, Union
+from functools import partial
+from typing import Callable, Protocol, TypeVar, Generic, AnyStr, get_args
 from schemamodels import exceptions as e
 from operator import contains, le, ge, gt, lt, mod, not_
 from contextlib import contextmanager
@@ -194,7 +193,7 @@ class SpecialKeywordDescriptor(JSONSchemaFieldDescriptor[A]):
             yield
 
             self.__dict__[self._name] = value
-        except Exception as err:
+        except Exception:
             raise
 
 

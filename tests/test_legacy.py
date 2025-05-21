@@ -4,7 +4,7 @@
 from jsonschema import validators
 import json
 import importlib
-from dataclasses import make_dataclass, FrozenInstanceError
+from dataclasses import FrozenInstanceError
 
 from schemamodels import exceptions, bases, COMPARISONS
 from schemamodels import generate_functors
@@ -43,7 +43,7 @@ def test_absent_is_not_none(Factory):
         assert False
 
     result = AbsentSchema(provider_id=1)
-    assert result.brand_name is ''
+    assert result.brand_name == ''
 
 
 def test_enforce_required(Factory):

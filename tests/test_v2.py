@@ -1,20 +1,12 @@
-import sys
-from jsonschema import validators
-import json
-import importlib
-from dataclasses import make_dataclass, FrozenInstanceError, dataclass
+from dataclasses import make_dataclass
 
-from schemamodels import SchemaModelFactory, SchemaModelFactoryV2, exceptions, bases, COMPARISONS
-from schemamodels import generate_functors
+from schemamodels import SchemaModelFactoryV2, bases
 
-from schemamodels import v2, bases
+from schemamodels import v2
 from schemamodels import exceptions as e
-from typing import TypeVar, Generic, runtime_checkable, get_args, get_origin
-import types
+from typing import TypeVar
 
 
-from functools import partialmethod
-from contextlib import contextmanager
 
 
 import pytest

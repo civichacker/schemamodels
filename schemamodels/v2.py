@@ -1,6 +1,5 @@
-from typing import AnyStr, Any, TypeVar, Generic, runtime_checkable, get_args, get_origin, Protocol
+from typing import TypeVar, Generic
 
-from functools import partial
 
 from schemamodels import exceptions as e
 
