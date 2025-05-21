@@ -3,11 +3,11 @@
 
 from abc import ABC, abstractmethod
 from collections import deque, UserList
-from functools import partial, reduce
-from typing import Callable, Protocol, TypeVar, Generic, AnyStr, get_args
+from functools import partial, reduce, partialmethod
+from typing import Callable, Protocol, TypeVar, Generic, AnyStr, get_args, Union
 from schemamodels import exceptions as e
 from operator import contains, le, ge, gt, lt, mod, not_
-
+from contextlib import contextmanager
 
 class BaseErrorHandler(ABC):
 
@@ -40,6 +40,7 @@ class BaseRenderer(ABC):
 
 
 A = TypeVar('A')
+U = TypeVar('U', int, str)
 T = TypeVar('T', bound=str)
 N = TypeVar('N', int, float)
 S = TypeVar('S', bound=None)
@@ -53,6 +54,9 @@ class JSONSchemaFieldDescriptor(Protocol[A]):
     def __init__(self, *, default):
         self._default = default
 
+    def __set_name__(self, o, name):
+        self._name = name
+
 
     def __get__(self, obj, type):
         if obj is None:
@@ -65,12 +69,48 @@ class JSONSchemaFieldDescriptor(Protocol[A]):
         ttype = get_args(self.__orig_bases__[0])[0]
 
         if not isinstance(value, ttype.__constraints__):
-            raise e.ValueTypeViolation()
+            # The constraints are actually *derived* from the subschema
+            raise e.ValueTypeViolation(f'failed field constraints: {ttype.__constraints__}')
 
 
 class ArrayDescriptor(Generic[C]): pass
+
+
 class BooleanDescriptor(JSONSchemaFieldDescriptor[S]): pass
+
+
 class ObjectDescriptor(Generic[O]): pass
+
+
+class CollectionDescriptor(JSONSchemaFieldDescriptor[C]):
+    COMPARISONS = {
+        'enum': {'comparator': lambda d: partial(contains, d), 'errorClass': e.ValueTypeViolation},
+        'maxLength': {'comparator': lambda d: partial(lambda bound, v: len(v) <= bound, d), 'errorClass': e.LengthConstraintViolation},
+        'not': {'comparator': lambda d: not isinstance(d, str), 'errorClass': e.ValueTypeViolation },
+        'minLength': {'comparator': lambda d: partial(lambda bound, v: len(v) >= bound, d), 'errorClass': e.LengthConstraintViolation}
+    }
+
+    def __init__(self, *, default=None, metadata={}):
+        self._metadata = metadata
+        self._default = default
+
+
+    def __set__(self, obj, value):
+        super().__set__(obj, value)
+
+        try:
+            for metakey, metaval in self._metadata.items():
+                key = self.COMPARISONS.get(metakey, None)
+                if not key:
+                    raise Exception(f"Comparison keyword {metakey}:{key} is not supported")
+                if not key.get('comparator')(metaval)(value):
+                    raise key.get('errorClass')(f'{self._name}={value} =/= {metakey}={metaval} constraint fails')
+
+            self.__dict__[self._name] = value
+        except Exception as e:
+            raise Exception from e
+
+
 
 class StringDescriptor(JSONSchemaFieldDescriptor[AnyStr]):
     COMPARISONS = {
@@ -83,9 +123,6 @@ class StringDescriptor(JSONSchemaFieldDescriptor[AnyStr]):
     def __init__(self, *, default=None, metadata={}):
         self._metadata = metadata
         self._default = default
-
-    def __set_name__(self, o, name):
-        self._name = name
 
     def __set__(self, obj, value):
         super().__set__(obj, value)
@@ -116,9 +153,6 @@ class NumberDescriptor(JSONSchemaFieldDescriptor[N]):
         self._metadata = metadata
         self._default = default
 
-    def __set_name__(self, o, name):
-        self._name = name
-
     def __set__(self, obj, value):
         super().__set__(obj, value)
 
@@ -130,6 +164,38 @@ class NumberDescriptor(JSONSchemaFieldDescriptor[N]):
                 raise key.get('errorClass')(f'{self._name}={value} =/= {metakey}={metaval} constraint fails')
 
         self.__dict__[self._name] = value
+
+class SpecialKeywordDescriptor(JSONSchemaFieldDescriptor[A]):
+
+    MAP_TTYPE = {
+        str: StringDescriptor,
+        float: NumberDescriptor,
+        int: NumberDescriptor,
+        bool: BooleanDescriptor,
+    }
+    def __init__(self, *, default=None, metadata={}):
+        self._metadata = metadata
+        self._default = default
+
+    @classmethod
+    def process_child_descriptors(cls, _name: str, c: A, value) -> bool:
+        des = cls.MAP_TTYPE.get(c)()
+        des.__set_name__(None, _name)
+        try:
+            des.__set__(_name, value)
+        except Exception:
+            return False
+        return True
+
+    @contextmanager
+    def dynamic_child_descriptors(self, obj, value):
+        try:
+
+            yield
+
+            self.__dict__[self._name] = value
+        except Exception as err:
+            raise
 
 
 class CoreModel(dict):
@@ -186,61 +252,3 @@ class CoreModel(dict):
         else:
             raise Exception()
 
-
-class TypeNode(CoreModel):
-
-    JSON_TYPE_MAP = {
-        'string': lambda d: isinstance(d, str),
-        'object': lambda d: isinstance(d, dict),
-        'integer': lambda d: isinstance(d, int),
-        'number': lambda d: isinstance(d, (float, int)),
-        'null': lambda d: d is None,
-        'boolean': lambda d: isinstance(d, bool),
-        'array': lambda d: isinstance(d, (list, tuple)),
-    }
-
-    @property
-    def type(self):
-        return self.get('type', None)
-
-    def check(self, value):
-        return self.JSON_TYPE_MAP.get(self.type)(value)
-
-    def map(self, value):
-        return TypeNode()
-
-
-class Tree(UserList):
-
-    def __init__(self, bag={}):
-        self.stack = deque()
-        super().__init__(bag)
-
-    def check(self, value):
-        return all(d.check(value) for d in self.stack)
-
-    def push(self, node):
-        self.stack.append(node)
-
-    def pop(self, node):
-        return self.stack.pop()
-
-
-class Node(CoreModel):
-
-    JSON_TYPE_MAP = {
-        'string': lambda d: isinstance(d, str),
-        'object': lambda d: isinstance(d, dict),
-        'integer': lambda d: isinstance(d, int),
-        'number': lambda d: isinstance(d, (float, int)),
-        'null': lambda d: d is None,
-        'boolean': lambda d: isinstance(d, bool),
-        'array': lambda d: isinstance(d, (list, tuple)),
-    }
-
-    @property
-    def type(self):
-        return self.data.get('type', None)
-
-    def check(self, value):
-        return self.JSON_TYPE_MAP.get(self.type)(value)

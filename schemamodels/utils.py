@@ -1,4 +1,7 @@
 from re import sub
+from typing import TypeVar
+
+T = TypeVar('T')
 
 
 def generate_classname(title: str) -> str:
