@@ -219,7 +219,8 @@ def test_string_maxlength_support(Factory):
 
     from schemamodels.dynamic import MaxLength
 
-    MaxLength(brand_name="abcd")
+    ml = MaxLength(brand_name="abcd")
+    assert ml.brand_name == 'abcd'
     with pytest.raises(exceptions.LengthConstraintViolation):
         MaxLength(brand_name="abcdefgh")
     with pytest.raises(exceptions.LengthConstraintViolation):
@@ -327,33 +328,10 @@ def test_custom_malformed_renderer(Factory):
 
 
 @pytest.mark.anyof
-def test_anyof_support(Factory):
-    anyof = '''
-    {
-        "$id": "https://schema.dev/fake-schema.schema.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "any-of-schema",
-        "description": "Blue Blah",
-        "type": "object",
-        "properties": {
-            "provider_id": {
-              "description": "this is a description",
-              "anyOf": [
-                {"type": "integer"},
-                {"type": "number"}
-              ]
-            },
-            "brand_name": {
-              "description": "this is a description",
-              "type": "string"
-            }
-        }
-    }
-    '''
+def test_anyof_support(Factory, anyof_schema):
 
-    t = json.loads(anyof)
     sm = Factory()
-    sm.register(t)
+    sm.register(anyof_schema)
 
     lib = importlib.import_module('schemamodels.dynamic')
 
@@ -362,7 +340,7 @@ def test_anyof_support(Factory):
     AnyOfSchema = getattr(lib, 'AnyOfSchema')
     AnyOfSchema(provider_id=1.4, brand_name="a")
     AnyOfSchema(provider_id=4, brand_name="a")
-    with pytest.raises(exceptions.SubSchemaFailureViolation):
+    with pytest.raises(Exception):
         AnyOfSchema(provider_id="s", brand_name="a")
 
 

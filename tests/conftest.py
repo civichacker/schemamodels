@@ -114,6 +114,31 @@ def enum_field_schema():
     yield json.loads(enum)
 
 
+@pytest.fixture(scope="session", autouse=True)
+def anyof_schema():
+    yield json.loads('''
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "any-of-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "description": "this is a description",
+              "anyOf": [
+                {"type": "integer"},
+                {"type": "number"}
+              ]
+            },
+            "brand_name": {
+              "description": "this is a description",
+              "type": "string"
+            }
+        }
+    }
+    ''')
+
 
 @pytest.fixture(scope="session", autouse=True, params=[SchemaModelFactory, SchemaModelFactoryV2])
 def Factory(request):

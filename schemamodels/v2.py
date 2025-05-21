@@ -32,11 +32,16 @@ class ScalarDescriptor(Generic[T]):
 
 
 class CollectionDescriptor(Generic[T]):
+
+    def __init__(self, *, default=None, metadata={}):
+        self._metadata = metadata
+        self._default = default
+
     def __set_name__(self, o, name):
         self._name = "_" + name
 
     def __set__(self, obj, value: T):
-        if not issubclass(value, self.__orig_class__.__args__[0]):
+        if not isinstance(value, list):
             raise e.ValueTypeViolation()
         setattr(obj, self._name, value)
 
