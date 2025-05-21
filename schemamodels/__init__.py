@@ -6,10 +6,11 @@ from dataclasses import make_dataclass, field, fields as fs, asdict, Field
 from dataclasses import MISSING
 import importlib
 from operator import xor, not_
-from typing import Callable, Deque
+from typing import Callable, Deque, TypeVar, get_args
 from collections import deque
+import types
 
-from functools import partial, reduce
+from functools import partial, reduce, partialmethod
 
 from schemamodels import exceptions as e, bases, utils, v2
 from schemamodels.constants import COMPARISONS, PORCELINE_KEYWORDS, JSON_TYPE_MAP, DEFAULT_FACTORIES
@@ -206,61 +207,58 @@ class SchemaModelFactoryV2(SchemaModelFactory):
         'array': (list, tuple),
     }
 
+    def __init__(self, schemas=[], error_handler=DefaultErrorHandler, renderer=DefaultRenderer):
+        super().__init__(schemas=schemas, error_handler=error_handler, renderer=renderer)
+
+    @classmethod
+    def dynamic_descriptor(cls, types_in_use: list) -> bases.SpecialKeywordDescriptor:
+
+        def dyn_init(self, default=None, metadata={}, schemas=[]):
+            self._metadata = metadata
+            self._default = default
+
+        def dyn__set__(self, obj, value):
+
+            ttype = get_args(self.__orig_bases__[0])
+            print(ttype)
+            print(ttype[0].__constraints__)
+
+            with self.dynamic_child_descriptors(obj, value) as inner:
+                if not any(map(lambda d: bases.SpecialKeywordDescriptor.process_child_descriptors(self._name, d, value), ttype[0].__constraints__)):
+                    raise e.ValueTypeViolation(f'failed field constraints: {ttype[0].__constraints__}')
+
+                if not isinstance(value, ttype[0].__constraints__):
+                    # The constraints are actually *derived* from the subschema
+                    raise e.ValueTypeViolation(f'failed field constraints: {ttype[0].__constraints__}')
+
+        body = {
+            "__init__": partialmethod(bases.SpecialKeywordDescriptor.__init__),
+            "__set__": partialmethod(dyn__set__)
+        }
+
+        return types.new_class('DynamicDescriptor', bases=(bases.SpecialKeywordDescriptor[TypeVar('T', *types_in_use)], ), exec_body=lambda ns: ns.update(body))
+
+
+
+
     def process_object(self, schema: dict, required_fields: list = []) -> tuple:
         fields = deque()
         fields_with_defaults = deque()
 
-        '''
         for k, v in schema['properties'].items():
             field_spec = dict()
             field_meta = dict()
             entry = (k, )
 
             if 'anyOf' in v:
-                field_meta.update(self.process_subschema('anyOf', v))
-            if 'oneOf' in v:
-                field_meta.update(self.process_subschema('oneOf', v))
-            if 'allOf' in v:
-                field_meta.update(self.process_subschema('allOf', v))
-            if 'not' in v:
-                field_meta.update({'not': generate_functors(v.get('not'))})
+                # Actually, type field may not be here
+                ttype = self.dynamic_descriptor([int, float])
 
-            if v.get('type', None) and v.get('type') != 'object':
-                entry += (JSON_TYPE_MAP.get(v.get('type')), )
-                field_spec.update(default_factory=DEFAULT_FACTORIES[v.get('type')])
-            elif v.get('type') == 'object':
-                fs, fswd = self.process_object(v.get('properties'))
-                entry += (k, fs)
-                field_spec.update(default_factory=DEFAULT_FACTORIES[v.get('type')])
-            else:
-                print('not a built-in')
-                entry += (1, )
+                fields.append((k, ttype, ttype(
+                    metadata=field_meta
+                )))
+                print(entry)
 
-            if 'default' in v.keys():
-                field_spec.update(default=v.get('default', Field))
-                field_spec.pop('default_factory', None)
-            else:
-                field_spec.update(default_factory=DEFAULT_FACTORIES.get(v.get('type'), str))
-
-            field_meta.update(generate_functors(v))
-            field_spec.update(metadata=field_meta)
-
-            if k in required_fields:
-                field_spec.update(default_factory=MISSING)
-                field_spec.update(default=MISSING)
-
-            entry += (field(**field_spec), )
-
-            if not hasattr(entry, 'default'):
-                fields.appendleft(entry)
-            else:
-                fields.append(entry)
-        '''
-
-        for k, v in schema['properties'].items():
-            field_spec = dict()
-            field_meta = dict()
-            entry = (k, )
 
             if v.get('type', None) and v.get('type') != 'object':
                 ttype = self.MAP_TTYPE.get(v.get('type'))
