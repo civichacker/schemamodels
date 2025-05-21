@@ -252,7 +252,15 @@ class SchemaModelFactoryV2(SchemaModelFactory):
 
             if 'anyOf' in v:
                 # Actually, type field may not be here
-                ttype = self.dynamic_descriptor([int, float])
+                subschemas = v.get('anyOf', [])
+                assert isinstance(subschemas, list)
+                inner_types = []
+                if not v.get('type', None):
+                    inner_types = [DEFAULT_FACTORIES.get(subschema.get('type')) for subschema in subschemas if subschema.get('type', None)]
+                else:
+                    inner_types.append(DEFAULT_FACTORIES.get(v.get('type')))
+                print(inner_types)
+                ttype = self.dynamic_descriptor(inner_types)
 
                 fields.append((k, ttype, ttype(
                     metadata=field_meta

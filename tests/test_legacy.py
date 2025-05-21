@@ -405,8 +405,13 @@ def test_anyof_support(Factory):
     AnyOfSchema = getattr(lib, 'AnyOfSchema')
     AnyOfSchema(provider_id=1.4, brand_name="a")
     AnyOfSchema(provider_id=4, brand_name="a")
-    with pytest.raises(exceptions.SubSchemaFailureViolation):
-        AnyOfSchema(provider_id="s", brand_name="a")
+    if Factory.__name__ == 'SchemaModelFactoryV2':
+        with pytest.raises(exceptions.ValueTypeViolation):
+            AnyOfSchema(provider_id="s", brand_name="a")
+
+    if Factory.__name__ == 'SchemaModelFactory':
+        with pytest.raises(exceptions.SubSchemaFailureViolation):
+            AnyOfSchema(provider_id="s", brand_name="a")
 
 
 @pytest.mark.allof
