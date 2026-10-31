@@ -6,7 +6,7 @@ from collections.abc import Callable
 from contextlib import contextmanager
 from functools import partial
 from operator import contains, ge, gt, le, lt, mod, not_
-from typing import Any, AnyStr, Protocol, TypeVar, get_args
+from typing import Any, AnyStr, ClassVar, Protocol, TypeVar, get_args
 
 from schemamodels import exceptions as e
 
@@ -20,9 +20,8 @@ class BaseErrorHandler(ABC):
 
     @classmethod
     def __subclasshook__(cls, klass):
-        if cls is BaseErrorHandler:
-            if "apply" in klass.__dict__:
-                return True
+        if cls is BaseErrorHandler and "apply" in klass.__dict__:
+            return True
         return NotImplementedError()
 
 
@@ -35,9 +34,8 @@ class BaseRenderer(ABC):
 
     @classmethod
     def __subclasshook__(cls, klass):
-        if cls is BaseRenderer:
-            if "apply" in klass.__dict__:
-                return True
+        if cls is BaseRenderer and "apply" in klass.__dict__:
+            return True
         return NotImplementedError()
 
 
@@ -78,7 +76,7 @@ def validate_subschema(subschema: dict, value: Any) -> bool:
         return False
     if 'exclusiveMaximum' in subschema and not (value < subschema['exclusiveMaximum']):
         return False
-    if 'multipleOf' in subschema and not (value % subschema['multipleOf'] == 0):
+    if 'multipleOf' in subschema and value % subschema['multipleOf'] != 0:
         return False
     if 'maxLength' in subschema and not (len(value) <= subschema['maxLength']):
         return False
@@ -92,9 +90,7 @@ def validate_subschema(subschema: dict, value: Any) -> bool:
         return False
     if 'allOf' in subschema and not all(validate_subschema(s, value) for s in subschema['allOf']):
         return False
-    if 'oneOf' in subschema and sum(1 for s in subschema['oneOf'] if validate_subschema(s, value)) != 1:
-        return False
-    return True
+    return not ('oneOf' in subschema and sum(1 for s in subschema['oneOf'] if validate_subschema(s, value)) != 1)
 
 
 class JSONSchemaFieldDescriptor(Protocol[A]):
@@ -201,7 +197,7 @@ class NullDescriptor(JSONSchemaFieldDescriptor[S]):
 
 
 class CollectionDescriptor(JSONSchemaFieldDescriptor[C]):
-    COMPARISONS = {
+    COMPARISONS: ClassVar[dict] = {
         'maxLength': {'comparator': lambda d: partial(lambda bound, v: len(v) <= bound, d), 'errorClass': e.LengthConstraintViolation},
         'minLength': {'comparator': lambda d: partial(lambda bound, v: len(v) >= bound, d), 'errorClass': e.LengthConstraintViolation}
     }
@@ -227,7 +223,7 @@ class CollectionDescriptor(JSONSchemaFieldDescriptor[C]):
 
 
 class StringDescriptor(JSONSchemaFieldDescriptor[AnyStr]):
-    COMPARISONS = {
+    COMPARISONS: ClassVar[dict] = {
         'maxLength': {'comparator': lambda d: partial(lambda bound, v: len(v) <= bound, d), 'errorClass': e.LengthConstraintViolation},
         'minLength': {'comparator': lambda d: partial(lambda bound, v: len(v) >= bound, d), 'errorClass': e.LengthConstraintViolation}
     }
@@ -253,7 +249,7 @@ class StringDescriptor(JSONSchemaFieldDescriptor[AnyStr]):
 
 
 class IntegerDescriptor(JSONSchemaFieldDescriptor[int]):
-    COMPARISONS = {
+    COMPARISONS: ClassVar[dict] = {
         'minimum': {'comparator': lambda d: partial(le, d), 'errorClass': e.RangeConstraintViolation},
         'maximum': {'comparator': lambda d: partial(ge, d), 'errorClass': e.RangeConstraintViolation},
         'exclusiveMinimum': {'comparator': lambda d: partial(lt, d), 'errorClass': e.RangeConstraintViolation},
@@ -283,7 +279,7 @@ class IntegerDescriptor(JSONSchemaFieldDescriptor[int]):
 
 class NumberDescriptor(JSONSchemaFieldDescriptor[N]):
 
-    COMPARISONS = {
+    COMPARISONS: ClassVar[dict] = {
         'minimum': {'comparator': lambda d: partial(le, d), 'errorClass': e.RangeConstraintViolation},
         'maximum': {'comparator': lambda d: partial(ge, d), 'errorClass': e.RangeConstraintViolation},
         'exclusiveMinimum': {'comparator': lambda d: partial(lt, d), 'errorClass': e.RangeConstraintViolation},
@@ -313,7 +309,7 @@ class NumberDescriptor(JSONSchemaFieldDescriptor[N]):
 
 class SpecialKeywordDescriptor(JSONSchemaFieldDescriptor[A]):
 
-    MAP_TTYPE = {
+    MAP_TTYPE: ClassVar[dict] = {
         str: StringDescriptor,
         float: NumberDescriptor,
         int: IntegerDescriptor,
@@ -351,7 +347,7 @@ class SpecialKeywordDescriptor(JSONSchemaFieldDescriptor[A]):
 
 
 class CoreModel(dict):
-    JSON_TYPE_MAP = {
+    JSON_TYPE_MAP: ClassVar[dict] = {
         'string': lambda d: isinstance(d, str),
         'object': lambda d: isinstance(d, dict),
         'integer': lambda d: isinstance(d, int),
@@ -361,11 +357,11 @@ class CoreModel(dict):
         'array': lambda d: isinstance(d, (list, tuple)),
     }
 
-    COMPARISONS = {
+    COMPARISONS: ClassVar[dict] = {
         'type': lambda d: JSON_TYPE_MAP[d],
-        'anyOf': lambda d: partial(lambda struct: generate_functors(struct), d),
-        'allOf': lambda d: partial(lambda struct: generate_functors(struct), d),
-        'oneOf': lambda d: partial(lambda struct: generate_functors(struct), d),
+        'anyOf': lambda d: partial(lambda struct: __import__('schemamodels').generate_functors(struct), d),
+        'allOf': lambda d: partial(lambda struct: __import__('schemamodels').generate_functors(struct), d),
+        'oneOf': lambda d: partial(lambda struct: __import__('schemamodels').generate_functors(struct), d),
         'not': lambda d: not_(d),
         'string': lambda d: isinstance(d, str),
         'integer': lambda d: isinstance(d, int),
@@ -388,12 +384,11 @@ class CoreModel(dict):
 
     @property
     def type(self):
-        print(self.values())
-        return list(self.values())[0].get('type', None)
+        return next(iter(self.values())).get('type', None)
 
     @property
     def name(self):
-        return list(self.keys())[0]
+        return next(iter(self.keys()))
 
     def map(self, operand):
         return TypeNode()

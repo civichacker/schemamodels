@@ -1,6 +1,5 @@
-from collections import ChainMap
 from functools import partial
-from operator import contains, ge, gt, le, lt, mod
+from operator import contains, ge, gt, le, lt, mod, not_
 
 DEFAULT_FACTORIES = {
     'string': str,
@@ -36,9 +35,9 @@ PORCELINE_KEYWORDS = [
 
 
 COLLECTIONS = {
-    'anyOf': lambda d: partial(lambda struct: generate_functors(struct), d),
-    'allOf': lambda d: partial(lambda struct: generate_functors(struct), d),
-    'oneOf': lambda d: partial(lambda struct: generate_functors(struct), d),
+    'anyOf': lambda d: partial(lambda struct: __import__('schemamodels').generate_functors(struct), d),
+    'allOf': lambda d: partial(lambda struct: __import__('schemamodels').generate_functors(struct), d),
+    'oneOf': lambda d: partial(lambda struct: __import__('schemamodels').generate_functors(struct), d),
 }
 
 COMPARISONS = {
@@ -53,5 +52,3 @@ COMPARISONS = {
     'minLength': lambda d: partial(lambda bound, v: len(v) >= bound, d),
     'multipleOf': lambda d: partial(lambda d, n: mod(n, d) == 0, d)
 }
-
-ALL_KEYWORDS = ChainMap(COLLECTIONS, COMPARISONS)

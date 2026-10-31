@@ -515,8 +515,8 @@ def test_functor_generator(Factory):
     t = json.loads(anyof)
     fn = None
     anyof_collection = t['properties']['provider_id'].get('anyOf', [])
-    funcs = map(lambda s: generate_functors(s), anyof_collection)
-    real = lambda value: map(lambda f: f['type'](value), funcs)
+    funcs = (generate_functors(s) for s in anyof_collection)
+    real = lambda value: (f['type'](value) for f in funcs)
     print({'anyOf': real})
     fn = {'anyOf': real}
 

@@ -12,7 +12,7 @@ from functools import partial, partialmethod, reduce
 from operator import not_, xor
 from typing import Deque, TypeVar, get_args
 
-from schemamodels import bases, utils, v2
+from schemamodels import bases, exceptions, utils, v2
 from schemamodels import exceptions as e
 from schemamodels.bases import BaseErrorHandler, BaseRenderer
 from schemamodels.constants import (
@@ -22,13 +22,31 @@ from schemamodels.constants import (
     PORCELINE_KEYWORDS,
 )
 
+__all__ = [
+    'COMPARISONS',
+    'DEFAULT_FACTORIES',
+    'JSON_TYPE_MAP',
+    'PORCELINE_KEYWORDS',
+    'DefaultErrorHandler',
+    'DefaultRenderer',
+    'SchemaModelFactory',
+    'SchemaModelFactoryV2',
+    'bases',
+    'exceptions',
+    'functor_eval',
+    'generate_functors',
+    'process_functors',
+    'utils',
+    'v2',
+]
+
 
 class DefaultErrorHandler(bases.BaseErrorHandler):
 
     @classmethod
     def apply(cls, instance: object) -> object:
         fields_with_metadata = filter(lambda f: f.metadata != {}, fs(instance))
-        final_form = list(map(lambda f: {'value': getattr(instance,  f.name), 'name': f.name, 'metadata': f.metadata}, fields_with_metadata))
+        final_form = [{'value': getattr(instance,  f.name), 'name': f.name, 'metadata': f.metadata} for f in fields_with_metadata]
 
         nodes = process_functors(final_form)
 
@@ -74,12 +92,12 @@ def generate_functors(struct):
 
 
 def process_functors(nodes):
-    t = list()
+    t = []
     for node in nodes:
         for k, v in node['metadata'].items():
             if k == 'anyOf':
                 ans_list = v(node["value"])
-                t.append({k: any([all(m.values()) for m in ans_list])})
+                t.append({k: any(all(m.values()) for m in ans_list)})
             elif k == 'allOf':
                 ans_list = v(node["value"])
                 t.append({k: all(all(m.values()) for m in ans_list)})
@@ -100,12 +118,14 @@ def functor_eval(functors: Callable, value):
 
 
 class SchemaModelFactory:
-    def __init__(self, schemas=[], error_handler=DefaultErrorHandler, renderer=DefaultRenderer):
+    def __init__(self, schemas=None, error_handler=DefaultErrorHandler, renderer=DefaultRenderer):
+        if schemas is None:
+            schemas = []
         self.error_handler = error_handler
         self.renderer = renderer
         self.___check_custom_hooks()
         self.dmod = importlib.import_module('schemamodels.dynamic')
-        list(map(lambda s: self.register(s), schemas))  # FIXME: find another way to 'process' the map
+        [self.register(s) for s in schemas]  # FIXME: find another way to 'process' the map
 
     def ___check_custom_hooks(self):
         self.error_handler()
@@ -120,7 +140,7 @@ class SchemaModelFactory:
             namespace={
                 '_errorhandler': self.error_handler.apply,
                 '_renderer': self.renderer.apply,
-                'tocsv': lambda self, header=False, fields=schema['properties'].keys(): f'{",".join(fields)}\n{",".join(map(lambda i: asdict(self)[i], fields))}' if header else ",".join(map(lambda i: asdict(self)[i], fields)),
+                'tocsv': lambda self, header=False, fields=schema['properties'].keys(): f'{",".join(fields)}\n{",".join(asdict(self)[i] for i in fields)}' if header else ",".join(asdict(self)[i] for i in fields),
                  'tolist': lambda self: list(asdict(self).values()),
                 'todict': lambda self: asdict(self),
                 '__post_init__': lambda self: self._errorhandler(self)._renderer(self)
@@ -130,13 +150,13 @@ class SchemaModelFactory:
         funcs = [generate_functors(s) for s in values[subschema]]
         return {subschema: partial(functor_eval, funcs)}
 
-    def process_object(self, schema: dict, required_fields: list = None) -> tuple:
+    def process_object(self, schema: dict, required_fields: list | None = None) -> tuple:
         required_fields = list(required_fields) if isinstance(required_fields, (list, tuple, set)) else []
         fields = deque()
         fields_with_defaults = deque()
         for k, v in schema['properties'].items():
-            field_spec = dict()
-            field_meta = dict()
+            field_spec = {}
+            field_meta = {}
             entry = (k, )
 
             if 'anyOf' in v:
@@ -159,7 +179,7 @@ class SchemaModelFactory:
                 print('not a built-in')
                 entry += (1, )
 
-            if 'default' in v.keys():
+            if 'default' in v:
                 field_spec.update(default=v.get('default', Field))
                 field_spec.pop('default_factory', None)
             else:
@@ -216,7 +236,7 @@ class SchemaModelFactoryV2(SchemaModelFactory):
         'null': bases.NullDescriptor,
     }
 
-    def __init__(self, schemas: list = None, error_handler: BaseErrorHandler = DefaultErrorHandler, renderer: BaseRenderer = DefaultRenderer) -> None:
+    def __init__(self, schemas: list | None = None, error_handler: BaseErrorHandler = DefaultErrorHandler, renderer: BaseRenderer = DefaultRenderer) -> None:
         schemas = list(schemas) if isinstance(schemas, (list, tuple, set)) else []
         super().__init__(schemas=schemas, error_handler=error_handler, renderer=renderer)
 
@@ -245,7 +265,7 @@ class SchemaModelFactoryV2(SchemaModelFactory):
 
         return DynamicDescriptor
 
-    def process_object(self, schema: dict, required_fields: list = None) -> tuple:
+    def process_object(self, schema: dict, required_fields: list | None = None) -> tuple:
         required_fields = list(required_fields) if isinstance(required_fields, (list, tuple, set)) else []
 
         fields = deque()
@@ -253,7 +273,7 @@ class SchemaModelFactoryV2(SchemaModelFactory):
 
         for k in v2.process_keys(schema):
             v = schema.get('properties', {}).get(k, {})
-            field_meta = dict()
+            field_meta = {}
 
             if 'anyOf' in v:
                 subschemas = v.get('anyOf', [])
@@ -352,7 +372,7 @@ class SchemaModelFactoryV2(SchemaModelFactory):
             dataclass_fields,
             frozen=True,
             namespace={
-                'tocsv': lambda self, header=False, fields=prop_keys: f'{",".join(fields)}\n{",".join(map(lambda i: str(asdict(self)[i]), fields))}' if header else ",".join(map(lambda i: str(asdict(self)[i]), fields)),
+                'tocsv': lambda self, header=False, fields=prop_keys: f'{",".join(fields)}\n{",".join(str(asdict(self)[i]) for i in fields)}' if header else ",".join(str(asdict(self)[i]) for i in fields),
                 'tolist': lambda self: list(asdict(self).values()),
                 'todict': lambda self: asdict(self),
             }

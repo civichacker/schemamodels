@@ -10,13 +10,9 @@ def generate_classname(title: str) -> str:
 
 def is_schema_object(schema: dict) -> bool:
     reqkws = {'type', 'properties'}
-    if not reqkws <= schema.keys() or schema.get('type', None) != 'object':
-        return False
-    return True
+    return not (not reqkws <= schema.keys() or schema.get('type', None) != 'object')
 
 
 def is_schema_toplevel_object(schema: dict) -> bool:
     reqkws = {'title', 'type', 'properties'}
-    if not reqkws <= schema.keys() or schema.get('type', None) != 'object':
-        return False
-    return True
+    return not (not reqkws <= schema.keys() or schema.get('type', None) != 'object')

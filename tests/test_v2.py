@@ -11,36 +11,34 @@ C = TypeVar('C', list, tuple)
 A = TypeVar('A')
 
 
-
-
 @pytest.mark.v2
 def test_new_iterable(simple_schema):
-
     obj_gen = v2.process_keys(simple_schema)
     for k in obj_gen:
-        assert k in simple_schema.get('properties').keys()
+        assert k in simple_schema.get('properties')
+
 
 @pytest.mark.v2
 def test_scalar_descriptor(simple_schema):
-
     SimpleSchema = make_dataclass(
         'SimpleSchema',
         [
             ('name', bases.StringDescriptor, bases.StringDescriptor(metadata={'maxLength': 3})),
             ('id', bases.NumberDescriptor, bases.NumberDescriptor())
         ]
-
     )
 
     ss = SimpleSchema(name="nic", id=2)
+    assert ss.name == "nic"
+    assert ss.id == 2
 
     with pytest.raises(e.LengthConstraintViolation):
         SimpleSchema(name="nice", id="nice")
 
+
 @pytest.mark.anyof
 @pytest.mark.v2
 def test_anyof_descriptor(anyof_schema):
-
     passed_in_types = [int, float]
 
     AnyOfDescriptor = SchemaModelFactoryV2.dynamic_descriptor(passed_in_types)
@@ -51,7 +49,6 @@ def test_anyof_descriptor(anyof_schema):
             ('brand_name', bases.StringDescriptor, bases.StringDescriptor(metadata={'maxLength': 3})),
             ('provider_id', AnyOfDescriptor, AnyOfDescriptor())
         ]
-
     )
 
     ss = AnyOfSchema(brand_name="nic", provider_id=2)
@@ -68,9 +65,8 @@ def test_anyof_descriptor(anyof_schema):
 @pytest.mark.descriptor
 @pytest.mark.anyof
 def test_dynamic_descriptor(anyof_schema):
-
     # Arrange
-    passed_in_types = [int, str] # Drives the tyoe check
+    passed_in_types = [int, str]  # Drives the type check
 
     AnyOfDescriptor = SchemaModelFactoryV2.dynamic_descriptor(passed_in_types)
     # Act
@@ -81,12 +77,10 @@ def test_dynamic_descriptor(anyof_schema):
         ] + [
             ('brand_name', bases.StringDescriptor, bases.StringDescriptor(metadata={'maxLength': 3})),
         ]
-
     )
 
     # Test
     assert AnyOfSchema(brand_name="nic", provider_id=2)
-
     assert AnyOfSchema(brand_name="nic", provider_id="str")
 
     with pytest.raises(e.LengthConstraintViolation):
@@ -94,3 +88,330 @@ def test_dynamic_descriptor(anyof_schema):
 
     with pytest.raises(e.ValueTypeViolation):
         AnyOfSchema(brand_name="nic", provider_id=3.2)
+
+
+@pytest.mark.v2
+@pytest.mark.descriptor
+def test_string_descriptor():
+    StringSchema = make_dataclass(
+        'StringSchema',
+        [
+            ('val', bases.StringDescriptor, bases.StringDescriptor(default="hello", metadata={'minLength': 2, 'maxLength': 5}))
+        ]
+    )
+
+    s1 = StringSchema(val="world")
+    assert s1.val == "world"
+
+    s_default = StringSchema()
+    assert s_default.val == "hello"
+
+    # Type violation
+    with pytest.raises(e.ValueTypeViolation):
+        StringSchema(val=123)
+
+    # Length violation (too short)
+    with pytest.raises(e.LengthConstraintViolation):
+        StringSchema(val="a")
+
+    # Length violation (too long)
+    with pytest.raises(e.LengthConstraintViolation):
+        StringSchema(val="toolongstring")
+
+    EnumStringSchema = make_dataclass(
+        'EnumStringSchema',
+        [
+            ('val', bases.StringDescriptor, bases.StringDescriptor(metadata={'enum': ['apple', 'banana']}))
+        ]
+    )
+    e1 = EnumStringSchema(val='apple')
+    assert e1.val == 'apple'
+    with pytest.raises(e.ValueTypeViolation):
+        EnumStringSchema(val='orange')
+
+
+@pytest.mark.v2
+@pytest.mark.descriptor
+def test_number_descriptor():
+    NumberSchema = make_dataclass(
+        'NumberSchema',
+        [
+            ('score', bases.NumberDescriptor, bases.NumberDescriptor(default=10.0, metadata={'minimum': 0.0, 'maximum': 100.0, 'multipleOf': 0.5}))
+        ]
+    )
+
+    n1 = NumberSchema(score=50.5)
+    assert n1.score == 50.5
+
+    n2 = NumberSchema(score=0)
+    assert n2.score == 0
+
+    # Type violation (reject boolean and string)
+    with pytest.raises(e.ValueTypeViolation):
+        NumberSchema(score=True)
+
+    with pytest.raises(e.ValueTypeViolation):
+        NumberSchema(score="50")
+
+    # Range violations
+    with pytest.raises(e.RangeConstraintViolation):
+        NumberSchema(score=-1.0)
+
+    with pytest.raises(e.RangeConstraintViolation):
+        NumberSchema(score=105.0)
+
+    with pytest.raises(e.RangeConstraintViolation):
+        NumberSchema(score=50.3)
+
+
+@pytest.mark.v2
+@pytest.mark.descriptor
+def test_integer_descriptor():
+    IntSchema = make_dataclass(
+        'IntSchema',
+        [
+            ('count', bases.IntegerDescriptor, bases.IntegerDescriptor(default=1, metadata={'exclusiveMinimum': 0, 'exclusiveMaximum': 10, 'multipleOf': 2}))
+        ]
+    )
+
+    i1 = IntSchema(count=4)
+    assert i1.count == 4
+
+    # Float rejection
+    with pytest.raises(e.ValueTypeViolation):
+        IntSchema(count=4.0)
+
+    # Bool rejection
+    with pytest.raises(e.ValueTypeViolation):
+        IntSchema(count=True)
+
+    # Exclusive bound violations
+    with pytest.raises(e.RangeConstraintViolation):
+        IntSchema(count=0)
+
+    with pytest.raises(e.RangeConstraintViolation):
+        IntSchema(count=10)
+
+    # multipleOf violation
+    with pytest.raises(e.RangeConstraintViolation):
+        IntSchema(count=3)
+
+
+@pytest.mark.v2
+@pytest.mark.descriptor
+def test_boolean_descriptor():
+    BoolSchema = make_dataclass(
+        'BoolSchema',
+        [
+            ('active', bases.BooleanDescriptor, bases.BooleanDescriptor(default=True, metadata={'enum': [True, False]}))
+        ]
+    )
+
+    b1 = BoolSchema(active=False)
+    assert b1.active is False
+
+    b_default = BoolSchema()
+    assert b_default.active is True
+
+    # Rejection of int or str
+    with pytest.raises(e.ValueTypeViolation):
+        BoolSchema(active=1)
+
+    with pytest.raises(e.ValueTypeViolation):
+        BoolSchema(active="true")
+
+
+@pytest.mark.v2
+@pytest.mark.descriptor
+def test_array_descriptor():
+    ArraySchema = make_dataclass(
+        'ArraySchema',
+        [
+            ('tags', bases.ArrayDescriptor, bases.ArrayDescriptor(metadata={'allOf': [{'type': 'array'}]}))
+        ]
+    )
+
+    a1 = ArraySchema(tags=['python', 'pytest'])
+    assert a1.tags == ['python', 'pytest']
+
+    # Non-array rejection
+    with pytest.raises(e.ValueTypeViolation):
+        ArraySchema(tags="python,pytest")
+
+    with pytest.raises(e.ValueTypeViolation):
+        ArraySchema(tags=123)
+
+
+@pytest.mark.v2
+@pytest.mark.descriptor
+def test_object_descriptor():
+    ObjSchema = make_dataclass(
+        'ObjSchema',
+        [
+            ('payload', bases.ObjectDescriptor, bases.ObjectDescriptor())
+        ]
+    )
+
+    o1 = ObjSchema(payload={'status': 'ok'})
+    assert o1.payload == {'status': 'ok'}
+
+    # Non-dict rejection
+    with pytest.raises(e.ValueTypeViolation):
+        ObjSchema(payload=[1, 2, 3])
+
+    with pytest.raises(e.ValueTypeViolation):
+        ObjSchema(payload="invalid")
+
+
+@pytest.mark.v2
+@pytest.mark.descriptor
+def test_null_descriptor():
+    NullSchema = make_dataclass(
+        'NullSchema',
+        [
+            ('nothing', bases.NullDescriptor, bases.NullDescriptor(default=None))
+        ]
+    )
+
+    n1 = NullSchema(nothing=None)
+    assert n1.nothing is None
+
+    n_default = NullSchema()
+    assert n_default.nothing is None
+
+    # Non-null rejection
+    with pytest.raises(e.ValueTypeViolation):
+        NullSchema(nothing="not-null")
+
+    with pytest.raises(e.ValueTypeViolation):
+        NullSchema(nothing=0)
+
+
+@pytest.mark.v2
+@pytest.mark.descriptor
+def test_collection_descriptor():
+    CollSchema = make_dataclass(
+        'CollSchema',
+        [
+            ('items', bases.CollectionDescriptor, bases.CollectionDescriptor(metadata={'minLength': 2, 'maxLength': 4}))
+        ]
+    )
+
+    c1 = CollSchema(items=[1, 2, 3])
+    assert c1.items == [1, 2, 3]
+
+    # Type violation
+    with pytest.raises(e.ValueTypeViolation):
+        CollSchema(items=123)
+
+    # Length violation
+    with pytest.raises(e.LengthConstraintViolation):
+        CollSchema(items=[1])
+
+    with pytest.raises(e.LengthConstraintViolation):
+        CollSchema(items=[1, 2, 3, 4, 5])
+
+
+@pytest.mark.v2
+@pytest.mark.descriptor
+def test_subschema_constraints():
+    # Test allOf, oneOf, not, and anyOf subschemas in JSONSchemaFieldDescriptor
+    SubSchemaClass = make_dataclass(
+        'SubSchemaClass',
+        [
+            ('all_field', bases.StringDescriptor, bases.StringDescriptor(metadata={'allOf': [{'minLength': 3}, {'maxLength': 6}]})),
+            ('one_field', bases.IntegerDescriptor, bases.IntegerDescriptor(metadata={'oneOf': [{'minimum': 10}, {'maximum': 5}]})),
+            ('not_field', bases.NumberDescriptor, bases.NumberDescriptor(metadata={'not': {'minimum': 100}})),
+        ]
+    )
+
+    inst = SubSchemaClass(all_field="test", one_field=12, not_field=50)
+    assert inst.all_field == "test"
+    assert inst.one_field == 12
+    assert inst.not_field == 50
+
+    # allOf violation
+    with pytest.raises(e.SubSchemaFailureViolation):
+        SubSchemaClass(all_field="ab", one_field=12, not_field=50)
+
+    # not violation
+    with pytest.raises(e.SubSchemaFailureViolation):
+        SubSchemaClass(all_field="test", one_field=12, not_field=150)
+
+
+@pytest.mark.v2
+@pytest.mark.descriptor
+def test_descriptor_class_access_and_special_keyword():
+    desc = bases.StringDescriptor(default="fallback")
+    assert desc.__get__(None, object) == "fallback"
+
+    # Test SpecialKeywordDescriptor.process_child_descriptors
+    assert bases.SpecialKeywordDescriptor.process_child_descriptors("test_field", str, "hello") is True
+    assert bases.SpecialKeywordDescriptor.process_child_descriptors("test_field", str, 123) is False
+    assert bases.SpecialKeywordDescriptor.process_child_descriptors("test_field", int, 123) is True
+    assert bases.SpecialKeywordDescriptor.process_child_descriptors("test_field", int, "hello") is False
+    assert bases.SpecialKeywordDescriptor.process_child_descriptors("test_field", bool, True) is True
+    assert bases.SpecialKeywordDescriptor.process_child_descriptors("test_field", bool, "true") is False
+    assert bases.SpecialKeywordDescriptor.process_child_descriptors("test_field", list, [1, 2]) is True
+    assert bases.SpecialKeywordDescriptor.process_child_descriptors("test_field", list, "not-a-list") is False
+    assert bases.SpecialKeywordDescriptor.process_child_descriptors("test_field", dict, {"k": "v"}) is True
+    assert bases.SpecialKeywordDescriptor.process_child_descriptors("test_field", dict, [1, 2]) is False
+    assert bases.SpecialKeywordDescriptor.process_child_descriptors("test_field", type(None), None) is True
+    assert bases.SpecialKeywordDescriptor.process_child_descriptors("test_field", type(None), 0) is False
+
+
+@pytest.mark.v2
+@pytest.mark.descriptor
+def test_schema_model_factory_v2_full_model():
+    schema = {
+        "$id": "https://example.com/user.schema.json",
+        "title": "comprehensive-vtwo-user-schema",
+        "type": "object",
+        "properties": {
+            "username": {"type": "string", "minLength": 3, "maxLength": 10},
+            "age": {"type": "integer", "minimum": 18},
+            "balance": {"type": "number", "minimum": 0.0},
+            "is_active": {"type": "boolean", "default": True},
+            "notes": {"type": "null", "default": None}
+        },
+        "required": ["username", "age", "balance"]
+    }
+
+    SchemaModelFactoryV2(schemas=[schema])
+    from schemamodels.dynamic import ComprehensiveVtwoUserSchema
+
+    user = ComprehensiveVtwoUserSchema(
+        username="john_doe",
+        age=25,
+        balance=150.75,
+        is_active=True,
+        notes=None
+    )
+
+    assert user.username == "john_doe"
+    assert user.age == 25
+    assert user.balance == 150.75
+    assert user.is_active is True
+    assert user.notes is None
+
+    # Test export methods
+    d = user.todict()
+    assert d["username"] == "john_doe"
+    assert d["age"] == 25
+    l = user.tolist()
+    assert "john_doe" in l
+    csv = user.tocsv(header=True)
+    assert "username" in csv
+    assert "john_doe" in csv
+
+    # Validation failure on required string length
+    with pytest.raises(e.LengthConstraintViolation):
+        ComprehensiveVtwoUserSchema(username="jo", age=25, balance=100.0)
+
+    # Validation failure on age range
+    with pytest.raises(e.RangeConstraintViolation):
+        ComprehensiveVtwoUserSchema(username="john_doe", age=16, balance=100.0)
+
+    # Validation failure on balance type
+    with pytest.raises(e.ValueTypeViolation):
+        ComprehensiveVtwoUserSchema(username="john_doe", age=25, balance="100.0")

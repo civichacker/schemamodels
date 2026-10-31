@@ -1,12 +1,25 @@
 from typing import Generic, TypeVar
 
 from schemamodels import exceptions as e
+from schemamodels.bases import (
+    ArrayDescriptor,
+    BooleanDescriptor,
+    IntegerDescriptor,
+    JSONSchemaFieldDescriptor,
+    NullDescriptor,
+    NumberDescriptor,
+    ObjectDescriptor,
+    SpecialKeywordDescriptor,
+    StringDescriptor,
+)
+from schemamodels.bases import (
+    CollectionDescriptor as BaseCollectionDescriptor,
+)
 
 T = TypeVar('T', bound=str)
 
 def process_keys(structure: dict):
-    for k in set(structure.get('properties', {}).keys()) - {'$id', '$schema'}:
-        yield k
+    yield from set(structure.get('properties', {}).keys()) - {'$id', '$schema'}
 
 
 class ScalarDescriptor(Generic[T]):
@@ -45,4 +58,21 @@ class CollectionDescriptor(Generic[T]):
         if not isinstance(value, list):
             raise e.ValueTypeViolation()
         setattr(obj, self._name, value)
+
+
+__all__ = [
+    'ArrayDescriptor',
+    'BaseCollectionDescriptor',
+    'BooleanDescriptor',
+    'CollectionDescriptor',
+    'IntegerDescriptor',
+    'JSONSchemaFieldDescriptor',
+    'NullDescriptor',
+    'NumberDescriptor',
+    'ObjectDescriptor',
+    'ScalarDescriptor',
+    'SpecialKeywordDescriptor',
+    'StringDescriptor',
+    'process_keys',
+]
 

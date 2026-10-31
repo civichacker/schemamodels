@@ -65,7 +65,7 @@ def test_enforce_required(Factory):
     }
     '''
     t = json.loads(test)
-    dmod = importlib.import_module('schemamodels.dynamic')
+    importlib.import_module('schemamodels.dynamic')
     sm = Factory()
     validators.Draft202012Validator.check_schema(t)
 
@@ -206,13 +206,13 @@ def test_numeric_range_support(Factory):
     )
 
     with pytest.raises(exceptions.RangeConstraintViolation):
-        fs = InclusiveRange(rating=6)
+        InclusiveRange(rating=6)
 
     with pytest.raises(exceptions.RangeConstraintViolation):
-        fs = ExclusiveMaxRange(rating=5)
+        ExclusiveMaxRange(rating=5)
 
     with pytest.raises(exceptions.RangeConstraintViolation):
-        fs = ExclusiveMinRange(rating=0)
+        ExclusiveMinRange(rating=0)
 
 
 @pytest.mark.multi
@@ -238,7 +238,7 @@ def test_numeric_multiple_support(Factory):
     from schemamodels.dynamic import MultipleOf
 
     with pytest.raises(exceptions.RangeConstraintViolation):
-        fs = MultipleOf(rating=20)
+        MultipleOf(rating=20)
 
 
 @pytest.mark.string
@@ -264,11 +264,11 @@ def test_string_maxlength_support(Factory):
 
     from schemamodels.dynamic import MaxLength
 
-    fs = MaxLength(brand_name="abcd")
+    MaxLength(brand_name="abcd")
     with pytest.raises(Exception):
-        fs = MaxLength(brand_name="abcdefgh")
+        MaxLength(brand_name="abcdefgh")
     with pytest.raises(exceptions.LengthConstraintViolation):
-        fs = MaxLength(brand_name="a")
+        MaxLength(brand_name="a")
 
 
 @pytest.mark.type
@@ -329,10 +329,10 @@ def test_custom_malformed_errorhandler(Factory):
     class MyCustomErrorHandler(bases.BaseErrorHandler):
         pass
 
-    t = json.loads(test)
+    json.loads(test)
 
     with pytest.raises(TypeError):
-        sm = Factory(error_handler=MyCustomErrorHandler)
+        Factory(error_handler=MyCustomErrorHandler)
 
     lib = importlib.import_module('schemamodels.dynamic')
     assert not hasattr(lib, 'FakeSchema')
@@ -363,9 +363,9 @@ def test_custom_malformed_renderer(Factory):
     class MyCustomRenderer(bases.BaseRenderer):
         pass
 
-    t = json.loads(test)
+    json.loads(test)
     with pytest.raises(TypeError):
-        sm = Factory(renderer=MyCustomRenderer)
+        Factory(renderer=MyCustomRenderer)
 
     lib = importlib.import_module('schemamodels.dynamic')
     assert not hasattr(lib, 'FakeSchema')
@@ -585,12 +585,12 @@ def test_functor_generator(Factory):
     t = json.loads(anyof)
     fn = None
     anyof_collection = t['properties']['provider_id'].get('anyOf', [])
-    funcs = map(lambda s: generate_functors(s), anyof_collection)
-    real = lambda value: map(lambda f: f['type'](value), funcs)
+    funcs = (generate_functors(s) for s in anyof_collection)
+    real = lambda value: (f['type'](value) for f in funcs)
     print({'anyOf': real})
     fn = {'anyOf': real}
 
-    f = generate_functors(t['properties']['provider_id'])
+    generate_functors(t['properties']['provider_id'])
     assert next(iter(fn.values()))(1.0)
     assert next(iter(fn.values()))(1)
     assert any(list(next(iter(fn.values()))(1.0)))
