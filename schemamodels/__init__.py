@@ -209,10 +209,11 @@ class SchemaModelFactoryV2(SchemaModelFactory):
     MAP_TTYPE = {
         'string': bases.StringDescriptor,
         'number': bases.NumberDescriptor,
-        'integer': bases.NumberDescriptor,
+        'integer': bases.IntegerDescriptor,
         'boolean': bases.BooleanDescriptor,
         'array': bases.ArrayDescriptor,
         'object': bases.ObjectDescriptor,
+        'null': bases.NullDescriptor,
     }
 
     def __init__(self, schemas: list = None, error_handler: BaseErrorHandler = DefaultErrorHandler, renderer: BaseRenderer = DefaultRenderer) -> None:

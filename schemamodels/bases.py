@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Civic Hacker, LLC
+# SPDX-FileCopyrightText: 2023 Civic Hacker LLC
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from abc import ABC, abstractmethod
@@ -66,6 +66,8 @@ def validate_subschema(subschema: dict, value: Any) -> bool:
             return False
         if t == 'array' and not isinstance(value, (list, tuple)):
             return False
+        if t == 'object' and not isinstance(value, dict):
+            return False
         if t == 'null' and value is not None:
             return False
     if 'minimum' in subschema and not (value >= subschema['minimum']):
@@ -129,6 +131,9 @@ class JSONSchemaFieldDescriptor(Protocol[A]):
                         raise e.ValueTypeViolation(f'failed field constraints: {bound}')
 
         if isinstance(self._metadata, dict):
+            if 'anyOf' in self._metadata:
+                if not any(validate_subschema(s, value) for s in self._metadata['anyOf']):
+                    raise e.SubSchemaFailureViolation("all of the subschemas failed")
             if 'allOf' in self._metadata:
                 if not all(validate_subschema(s, value) for s in self._metadata['allOf']):
                     raise e.SubSchemaFailureViolation("at least one subschema failed")
@@ -138,6 +143,9 @@ class JSONSchemaFieldDescriptor(Protocol[A]):
             if 'not' in self._metadata:
                 if validate_subschema(self._metadata['not'], value):
                     raise e.SubSchemaFailureViolation("subschema failed")
+            if 'enum' in self._metadata:
+                if value not in self._metadata['enum']:
+                    raise e.ValueTypeViolation(f"{self._name}={value} =/= enum={self._metadata['enum']} constraint fails")
 
 
 class ArrayDescriptor(JSONSchemaFieldDescriptor[C]):
@@ -179,11 +187,22 @@ class ObjectDescriptor(JSONSchemaFieldDescriptor[O]):
         self.__dict__[self._name] = value
 
 
+class NullDescriptor(JSONSchemaFieldDescriptor[S]):
+    def __init__(self, *, default=None, metadata=None) -> None:
+        super().__init__(default=default, metadata=metadata or {})
+
+    def __set__(self, obj, value):
+        if value is not None:
+            raise e.ValueTypeViolation("expected null")
+        super().__set__(obj, value)
+        if hasattr(obj, '__dict__'):
+            obj.__dict__[self._name] = value
+        self.__dict__[self._name] = value
+
+
 class CollectionDescriptor(JSONSchemaFieldDescriptor[C]):
     COMPARISONS = {
-        'enum': {'comparator': lambda d: partial(contains, d), 'errorClass': e.ValueTypeViolation},
         'maxLength': {'comparator': lambda d: partial(lambda bound, v: len(v) <= bound, d), 'errorClass': e.LengthConstraintViolation},
-        'not': {'comparator': lambda d: not isinstance(d, str), 'errorClass': e.ValueTypeViolation },
         'minLength': {'comparator': lambda d: partial(lambda bound, v: len(v) >= bound, d), 'errorClass': e.LengthConstraintViolation}
     }
 
@@ -191,6 +210,8 @@ class CollectionDescriptor(JSONSchemaFieldDescriptor[C]):
         super().__init__(default=default, metadata=metadata or {})
 
     def __set__(self, obj, value):
+        if not isinstance(value, (list, tuple, set)):
+            raise e.ValueTypeViolation("expected collection")
         super().__set__(obj, value)
 
         for metakey, metaval in self._metadata.items():
@@ -205,12 +226,9 @@ class CollectionDescriptor(JSONSchemaFieldDescriptor[C]):
         self.__dict__[self._name] = value
 
 
-
 class StringDescriptor(JSONSchemaFieldDescriptor[AnyStr]):
     COMPARISONS = {
-        'enum': {'comparator': lambda d: partial(contains, d), 'errorClass': e.ValueTypeViolation},
         'maxLength': {'comparator': lambda d: partial(lambda bound, v: len(v) <= bound, d), 'errorClass': e.LengthConstraintViolation},
-        'not': {'comparator': lambda d: not isinstance(d, str), 'errorClass': e.ValueTypeViolation },
         'minLength': {'comparator': lambda d: partial(lambda bound, v: len(v) >= bound, d), 'errorClass': e.LengthConstraintViolation}
     }
 
@@ -234,7 +252,35 @@ class StringDescriptor(JSONSchemaFieldDescriptor[AnyStr]):
         self.__dict__[self._name] = value
 
 
-# noinspection PyProtocol
+class IntegerDescriptor(JSONSchemaFieldDescriptor[int]):
+    COMPARISONS = {
+        'minimum': {'comparator': lambda d: partial(le, d), 'errorClass': e.RangeConstraintViolation},
+        'maximum': {'comparator': lambda d: partial(ge, d), 'errorClass': e.RangeConstraintViolation},
+        'exclusiveMinimum': {'comparator': lambda d: partial(lt, d), 'errorClass': e.RangeConstraintViolation},
+        'exclusiveMaximum': {'comparator': lambda d: partial(gt, d), 'errorClass': e.RangeConstraintViolation},
+        'multipleOf': {'comparator': lambda d: partial(lambda d, n: mod(n, d) == 0, d), 'errorClass': e.RangeConstraintViolation},
+    }
+
+    def __init__(self, *, default=None, metadata=None):
+        super().__init__(default=default, metadata=metadata or {})
+
+    def __set__(self, obj, value):
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise e.ValueTypeViolation("expected integer")
+        super().__set__(obj, value)
+
+        for metakey, metaval in self._metadata.items():
+            key = self.COMPARISONS.get(metakey, None)
+            if not key:
+                continue
+            if not key.get('comparator')(metaval)(value):
+                raise key.get('errorClass')(f'{self._name}={value} =/= {metakey}={metaval} constraint fails')
+
+        if hasattr(obj, '__dict__'):
+            obj.__dict__[self._name] = value
+        self.__dict__[self._name] = value
+
+
 class NumberDescriptor(JSONSchemaFieldDescriptor[N]):
 
     COMPARISONS = {
@@ -243,7 +289,6 @@ class NumberDescriptor(JSONSchemaFieldDescriptor[N]):
         'exclusiveMinimum': {'comparator': lambda d: partial(lt, d), 'errorClass': e.RangeConstraintViolation},
         'exclusiveMaximum': {'comparator': lambda d: partial(gt, d), 'errorClass': e.RangeConstraintViolation},
         'multipleOf': {'comparator': lambda d: partial(lambda d, n: mod(n, d) == 0, d), 'errorClass': e.RangeConstraintViolation},
-        'not': {'comparator': lambda d: not_(d), 'errorClass': e.ValueTypeViolation },
     }
 
     def __init__(self, *, default=None, metadata=None):
@@ -265,15 +310,18 @@ class NumberDescriptor(JSONSchemaFieldDescriptor[N]):
             obj.__dict__[self._name] = value
         self.__dict__[self._name] = value
 
+
 class SpecialKeywordDescriptor(JSONSchemaFieldDescriptor[A]):
 
     MAP_TTYPE = {
         str: StringDescriptor,
         float: NumberDescriptor,
-        int: NumberDescriptor,
+        int: IntegerDescriptor,
         bool: BooleanDescriptor,
         list: ArrayDescriptor,
+        tuple: ArrayDescriptor,
         dict: ObjectDescriptor,
+        type(None): NullDescriptor,
     }
     def __init__(self, *, default=None, metadata=None):
         super().__init__(default=default, metadata=metadata or {})

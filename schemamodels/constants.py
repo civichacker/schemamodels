@@ -12,6 +12,7 @@ DEFAULT_FACTORIES = {
     'anyof': callable,
     'allof': callable,
     'array': list,
+    'object': dict,
 }
 
 JSON_TYPE_MAP = {
