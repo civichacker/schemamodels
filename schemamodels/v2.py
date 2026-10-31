@@ -3,11 +3,11 @@ from typing import TypeVar, Generic
 
 from schemamodels import exceptions as e
 
+T = TypeVar('T', bound=str)
 
 def process_keys(structure: dict):
     for k in set(structure.get('properties', {}).keys()) - {'$id', '$schema'}:
         yield k
-T = TypeVar('T', bound=str)
 
 
 class ScalarDescriptor(Generic[T]):
@@ -19,6 +19,9 @@ class ScalarDescriptor(Generic[T]):
         'null': lambda d: d is None,
         'boolean': lambda d: isinstance(d, bool),
     }
+
+    def __init__(self):
+        self.__orig_class__ = None
 
     def __set_name__(self, o, name):
         self._name = "_" + name
@@ -32,7 +35,7 @@ class ScalarDescriptor(Generic[T]):
 
 class CollectionDescriptor(Generic[T]):
 
-    def __init__(self, *, default=None, metadata={}):
+    def __init__(self, *, default=None, metadata=dict):
         self._metadata = metadata
         self._default = default
 

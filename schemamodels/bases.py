@@ -3,7 +3,7 @@
 
 from abc import ABC, abstractmethod
 from functools import partial
-from typing import Callable, Protocol, TypeVar, Generic, AnyStr, get_args
+from typing import Callable, Protocol, TypeVar, Generic, AnyStr, get_args, Any
 from schemamodels import exceptions as e
 from operator import contains, le, ge, gt, lt, mod, not_
 from contextlib import contextmanager
@@ -48,37 +48,132 @@ O = TypeVar('O', bound=dict)
 B = TypeVar('B', bound=bool)
 
 
+def validate_subschema(subschema: dict, value: Any) -> bool:
+    if not isinstance(subschema, dict):
+        return True
+    if 'type' in subschema:
+        t = subschema['type']
+        if t == 'string' and not isinstance(value, str):
+            return False
+        if t == 'integer' and (not isinstance(value, int) or type(value) is bool):
+            return False
+        if t == 'number' and (not isinstance(value, (int, float)) or type(value) is bool):
+            return False
+        if t == 'boolean' and type(value) is not bool:
+            return False
+        if t == 'array' and not isinstance(value, (list, tuple)):
+            return False
+        if t == 'null' and value is not None:
+            return False
+    if 'minimum' in subschema and not (value >= subschema['minimum']):
+        return False
+    if 'maximum' in subschema and not (value <= subschema['maximum']):
+        return False
+    if 'exclusiveMinimum' in subschema and not (value > subschema['exclusiveMinimum']):
+        return False
+    if 'exclusiveMaximum' in subschema and not (value < subschema['exclusiveMaximum']):
+        return False
+    if 'multipleOf' in subschema and not (value % subschema['multipleOf'] == 0):
+        return False
+    if 'maxLength' in subschema and not (len(value) <= subschema['maxLength']):
+        return False
+    if 'minLength' in subschema and not (len(value) >= subschema['minLength']):
+        return False
+    if 'enum' in subschema and not (value in subschema['enum']):
+        return False
+    if 'not' in subschema and validate_subschema(subschema['not'], value):
+        return False
+    if 'anyOf' in subschema and not any(validate_subschema(s, value) for s in subschema['anyOf']):
+        return False
+    if 'allOf' in subschema and not all(validate_subschema(s, value) for s in subschema['allOf']):
+        return False
+    if 'oneOf' in subschema and sum(1 for s in subschema['oneOf'] if validate_subschema(s, value)) != 1:
+        return False
+    return True
+
+
 class JSONSchemaFieldDescriptor(Protocol[A]):
 
-    def __init__(self, *, default):
+    def __init__(self, *, default: Any = None, metadata: Any = None) -> None:
+        self.__orig_bases__ = None
         self._default = default
+        self._metadata = metadata or {}
 
     def __set_name__(self, o, name):
         self._name = name
 
-
-    def __get__(self, obj, type):
+    def __get__(self, obj, type=None):
         if obj is None:
             return self._default
 
+        if hasattr(obj, '__dict__') and self._name in obj.__dict__:
+            return obj.__dict__[self._name]
+
         return self.__dict__.get(self._name, self._default)
 
+    def __set__(self, obj, value):
+        if hasattr(self, '__orig_bases__') and self.__orig_bases__:
+            args = get_args(self.__orig_bases__[0])
+            if args:
+                ttype = args[0]
+                constraints = getattr(ttype, '__constraints__', None)
+                if constraints:
+                    if not isinstance(value, constraints):
+                        raise e.ValueTypeViolation(f'failed field constraints: {constraints}')
+                else:
+                    bound = getattr(ttype, '__bound__', None)
+                    if bound and not isinstance(value, bound):
+                        raise e.ValueTypeViolation(f'failed field constraints: {bound}')
+
+        if isinstance(self._metadata, dict):
+            if 'allOf' in self._metadata:
+                if not all(validate_subschema(s, value) for s in self._metadata['allOf']):
+                    raise e.SubSchemaFailureViolation("at least one subschema failed")
+            if 'oneOf' in self._metadata:
+                if sum(1 for s in self._metadata['oneOf'] if validate_subschema(s, value)) != 1:
+                    raise e.SubSchemaFailureViolation("none or multiple of the subschemas failed")
+            if 'not' in self._metadata:
+                if validate_subschema(self._metadata['not'], value):
+                    raise e.SubSchemaFailureViolation("subschema failed")
+
+
+class ArrayDescriptor(JSONSchemaFieldDescriptor[C]):
+    def __init__(self, *, default=None, metadata=None) -> None:
+        super().__init__(default=default, metadata=metadata or {})
 
     def __set__(self, obj, value):
-        ttype = get_args(self.__orig_bases__[0])[0]
-
-        if not isinstance(value, ttype.__constraints__):
-            # The constraints are actually *derived* from the subschema
-            raise e.ValueTypeViolation(f'failed field constraints: {ttype.__constraints__}')
-
-
-class ArrayDescriptor(Generic[C]): pass
+        if not isinstance(value, (list, tuple)):
+            raise e.ValueTypeViolation("expected array")
+        super().__set__(obj, value)
+        if hasattr(obj, '__dict__'):
+            obj.__dict__[self._name] = value
+        self.__dict__[self._name] = value
 
 
-class BooleanDescriptor(JSONSchemaFieldDescriptor[S]): pass
+class BooleanDescriptor(JSONSchemaFieldDescriptor[B]):
+    def __init__(self, *, default=None, metadata=None) -> None:
+        super().__init__(default=default, metadata=metadata or {})
+
+    def __set__(self, obj, value):
+        if not isinstance(value, bool):
+            raise e.ValueTypeViolation("expected boolean")
+        super().__set__(obj, value)
+        if hasattr(obj, '__dict__'):
+            obj.__dict__[self._name] = value
+        self.__dict__[self._name] = value
 
 
-class ObjectDescriptor(Generic[O]): pass
+class ObjectDescriptor(JSONSchemaFieldDescriptor[O]):
+    def __init__(self, *, default=None, metadata=None) -> None:
+        super().__init__(default=default, metadata=metadata or {})
+
+    def __set__(self, obj, value):
+        if not isinstance(value, dict):
+            raise e.ValueTypeViolation("expected object")
+        super().__set__(obj, value)
+        if hasattr(obj, '__dict__'):
+            obj.__dict__[self._name] = value
+        self.__dict__[self._name] = value
 
 
 class CollectionDescriptor(JSONSchemaFieldDescriptor[C]):
@@ -89,25 +184,22 @@ class CollectionDescriptor(JSONSchemaFieldDescriptor[C]):
         'minLength': {'comparator': lambda d: partial(lambda bound, v: len(v) >= bound, d), 'errorClass': e.LengthConstraintViolation}
     }
 
-    def __init__(self, *, default=None, metadata={}):
-        self._metadata = metadata
-        self._default = default
-
+    def __init__(self, *, default: Any = None, metadata: Any = None) -> None:
+        super().__init__(default=default, metadata=metadata or {})
 
     def __set__(self, obj, value):
         super().__set__(obj, value)
 
-        try:
-            for metakey, metaval in self._metadata.items():
-                key = self.COMPARISONS.get(metakey, None)
-                if not key:
-                    raise Exception(f"Comparison keyword {metakey}:{key} is not supported")
-                if not key.get('comparator')(metaval)(value):
-                    raise key.get('errorClass')(f'{self._name}={value} =/= {metakey}={metaval} constraint fails')
+        for metakey, metaval in self._metadata.items():
+            key = self.COMPARISONS.get(metakey, None)
+            if not key:
+                continue
+            if not key.get('comparator')(metaval)(value):
+                raise key.get('errorClass')(f'{self._name}={value} =/= {metakey}={metaval} constraint fails')
 
-            self.__dict__[self._name] = value
-        except Exception as e:
-            raise Exception from e
+        if hasattr(obj, '__dict__'):
+            obj.__dict__[self._name] = value
+        self.__dict__[self._name] = value
 
 
 
@@ -119,27 +211,31 @@ class StringDescriptor(JSONSchemaFieldDescriptor[AnyStr]):
         'minLength': {'comparator': lambda d: partial(lambda bound, v: len(v) >= bound, d), 'errorClass': e.LengthConstraintViolation}
     }
 
-    def __init__(self, *, default=None, metadata={}):
-        self._metadata = metadata
-        self._default = default
+    def __init__(self, *, default=None, metadata=None):
+        super().__init__(default=default, metadata=metadata or {})
 
     def __set__(self, obj, value):
+        if not isinstance(value, (str, bytes)):
+            raise e.ValueTypeViolation("expected string")
         super().__set__(obj, value)
 
         for metakey, metaval in self._metadata.items():
             key = self.COMPARISONS.get(metakey, None)
             if not key:
-                raise Exception(f"Comparison keyword {metakey}:{key} is not supported")
+                continue
             if not key.get('comparator')(metaval)(value):
                 raise key.get('errorClass')(f'{self._name}={value} =/= {metakey}={metaval} constraint fails')
 
+        if hasattr(obj, '__dict__'):
+            obj.__dict__[self._name] = value
         self.__dict__[self._name] = value
 
 
+# noinspection PyProtocol
 class NumberDescriptor(JSONSchemaFieldDescriptor[N]):
 
     COMPARISONS = {
-        'minimum': {'comparator': lambda d: partial(le, d), 'errorClass': e.ValueTypeViolation},
+        'minimum': {'comparator': lambda d: partial(le, d), 'errorClass': e.RangeConstraintViolation},
         'maximum': {'comparator': lambda d: partial(ge, d), 'errorClass': e.RangeConstraintViolation},
         'exclusiveMinimum': {'comparator': lambda d: partial(lt, d), 'errorClass': e.RangeConstraintViolation},
         'exclusiveMaximum': {'comparator': lambda d: partial(gt, d), 'errorClass': e.RangeConstraintViolation},
@@ -147,21 +243,23 @@ class NumberDescriptor(JSONSchemaFieldDescriptor[N]):
         'not': {'comparator': lambda d: not_(d), 'errorClass': e.ValueTypeViolation },
     }
 
-    # All fields support default arg
-    def __init__(self, *, default=None, metadata={}):
-        self._metadata = metadata
-        self._default = default
+    def __init__(self, *, default=None, metadata=None):
+        super().__init__(default=default, metadata=metadata or {})
 
     def __set__(self, obj, value):
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise e.ValueTypeViolation("expected number")
         super().__set__(obj, value)
 
         for metakey, metaval in self._metadata.items():
             key = self.COMPARISONS.get(metakey, None)
             if not key:
-                raise Exception(f"Comparison keyword {metakey}:{key} is not supported")
+                continue
             if not key.get('comparator')(metaval)(value):
                 raise key.get('errorClass')(f'{self._name}={value} =/= {metakey}={metaval} constraint fails')
 
+        if hasattr(obj, '__dict__'):
+            obj.__dict__[self._name] = value
         self.__dict__[self._name] = value
 
 class SpecialKeywordDescriptor(JSONSchemaFieldDescriptor[A]):
@@ -171,14 +269,18 @@ class SpecialKeywordDescriptor(JSONSchemaFieldDescriptor[A]):
         float: NumberDescriptor,
         int: NumberDescriptor,
         bool: BooleanDescriptor,
+        list: ArrayDescriptor,
+        dict: ObjectDescriptor,
     }
-    def __init__(self, *, default=None, metadata={}):
-        self._metadata = metadata
-        self._default = default
+    def __init__(self, *, default=None, metadata=None):
+        super().__init__(default=default, metadata=metadata or {})
 
     @classmethod
     def process_child_descriptors(cls, _name: str, c: A, value) -> bool:
-        des = cls.MAP_TTYPE.get(c)()
+        descriptor_cls = cls.MAP_TTYPE.get(c)
+        if descriptor_cls is None:
+            return True
+        des = descriptor_cls()
         des.__set_name__(None, _name)
         try:
             des.__set__(_name, value)
@@ -189,9 +291,9 @@ class SpecialKeywordDescriptor(JSONSchemaFieldDescriptor[A]):
     @contextmanager
     def dynamic_child_descriptors(self, obj, value):
         try:
-
             yield
-
+            if hasattr(obj, '__dict__'):
+                obj.__dict__[self._name] = value
             self.__dict__[self._name] = value
         except Exception:
             raise

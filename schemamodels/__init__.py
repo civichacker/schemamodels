@@ -13,6 +13,7 @@ import types
 from functools import partial, reduce, partialmethod
 
 from schemamodels import exceptions as e, bases, utils, v2
+from schemamodels.bases import BaseRenderer, BaseErrorHandler
 from schemamodels.constants import COMPARISONS, PORCELINE_KEYWORDS, JSON_TYPE_MAP, DEFAULT_FACTORIES
 
 
@@ -119,11 +120,12 @@ class SchemaModelFactory:
                 '__post_init__': lambda self: self._errorhandler(self)._renderer(self)
             })
 
-    def process_subschema(self, subschema: dict, values: dict) -> dict:
+    def process_subschema(self, subschema: str, values: dict) -> dict:
         funcs = [generate_functors(s) for s in values[subschema]]
         return {subschema: partial(functor_eval, funcs)}
 
-    def process_object(self, schema: dict, required_fields: list = []) -> tuple:
+    def process_object(self, schema: dict, required_fields: list = None) -> tuple:
+        required_fields = list(required_fields) if isinstance(required_fields, (list, tuple, set)) else []
         fields = deque()
         fields_with_defaults = deque()
         for k, v in schema['properties'].items():
@@ -202,88 +204,117 @@ class SchemaModelFactoryV2(SchemaModelFactory):
         'string': bases.StringDescriptor,
         'number': bases.NumberDescriptor,
         'integer': bases.NumberDescriptor,
-        'null': None,
         'boolean': bases.BooleanDescriptor,
-        'array': (list, tuple),
+        'array': bases.ArrayDescriptor,
+        'object': bases.ObjectDescriptor,
     }
 
-    def __init__(self, schemas=[], error_handler=DefaultErrorHandler, renderer=DefaultRenderer):
+    def __init__(self, schemas: list = None, error_handler: BaseErrorHandler = DefaultErrorHandler, renderer: BaseRenderer = DefaultRenderer) -> None:
+        schemas = list(schemas) if isinstance(schemas, (list, tuple, set)) else []
         super().__init__(schemas=schemas, error_handler=error_handler, renderer=renderer)
 
     @classmethod
-    def dynamic_descriptor(cls, types_in_use: list) -> bases.SpecialKeywordDescriptor:
+    def dynamic_descriptor(cls, passed_in_types: list) -> type:
+        T = TypeVar('T', *passed_in_types)
 
-        def dyn_init(self, default=None, metadata={}, schemas=[]):
-            self._metadata = metadata
-            self._default = default
+        class DynamicDescriptor(bases.SpecialKeywordDescriptor[T]):
 
-        def dyn__set__(self, obj, value):
+            def __init__(self, *, default=None, metadata=None) -> None:
+                super().__init__(default=default, metadata=metadata or {})
 
-            ttype = get_args(self.__orig_bases__[0])
-            print(ttype)
-            print(ttype[0].__constraints__)
+            def __set__(self, obj, value):
+                types_to_check = getattr(T, '__constraints__', ())
+                if types_to_check:
+                    if isinstance(value, bool) and bool not in types_to_check:
+                        raise e.ValueTypeViolation("failed field constraints")
+                    if not isinstance(value, types_to_check):
+                        raise e.ValueTypeViolation(f'failed field constraints: {types_to_check}')
 
-            with self.dynamic_child_descriptors(obj, value) as inner:
-                if not any(map(lambda d: bases.SpecialKeywordDescriptor.process_child_descriptors(self._name, d, value), ttype[0].__constraints__)):
-                    raise e.ValueTypeViolation(f'failed field constraints: {ttype[0].__constraints__}')
+                for c in passed_in_types:
+                    bases.SpecialKeywordDescriptor.process_child_descriptors(self._name, c, value)
 
-                if not isinstance(value, ttype[0].__constraints__):
-                    # The constraints are actually *derived* from the subschema
-                    raise e.ValueTypeViolation(f'failed field constraints: {ttype[0].__constraints__}')
+                with self.dynamic_child_descriptors(obj, value):
+                    super().__set__(obj, value)
 
-        body = {
-            "__init__": partialmethod(bases.SpecialKeywordDescriptor.__init__),
-            "__set__": partialmethod(dyn__set__)
-        }
+        return DynamicDescriptor
 
-        return types.new_class('DynamicDescriptor', bases=(bases.SpecialKeywordDescriptor[TypeVar('T', *types_in_use)], ), exec_body=lambda ns: ns.update(body))
+    def process_object(self, schema: dict, required_fields: list = None) -> tuple:
+        required_fields = list(required_fields) if isinstance(required_fields, (list, tuple, set)) else []
 
-
-
-
-    def process_object(self, schema: dict, required_fields: list = []) -> tuple:
         fields = deque()
         fields_with_defaults = deque()
 
-        for k, v in schema['properties'].items():
-            field_spec = dict()
+        for k in v2.process_keys(schema):
+            v = schema.get('properties', {}).get(k, {})
             field_meta = dict()
-            entry = (k, )
 
             if 'anyOf' in v:
-                # Actually, type field may not be here
                 subschemas = v.get('anyOf', [])
-                assert isinstance(subschemas, list)
                 inner_types = []
                 if not v.get('type', None):
                     inner_types = [DEFAULT_FACTORIES.get(subschema.get('type')) for subschema in subschemas if subschema.get('type', None)]
                 else:
                     inner_types.append(DEFAULT_FACTORIES.get(v.get('type')))
-                print(inner_types)
                 ttype = self.dynamic_descriptor(inner_types)
-
-                fields.append((k, ttype, ttype(
-                    metadata=field_meta
-                )))
-
-            if v.get('type', None) and v.get('type') != 'object':
-                ttype = self.MAP_TTYPE.get(v.get('type'))
-
-                for guard, operation in ttype.COMPARISONS.items():
-                    if guard in v.keys():
-                        field_meta.update({guard: v.get(guard)})
-
-
-                fields.append((k, ttype, ttype(
-                    default=v.get('default', None),
-                    metadata=field_meta
-                )))
+                for guard in ('anyOf', 'maxLength', 'minLength', 'enum', 'minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum', 'multipleOf', 'not', 'allOf', 'oneOf'):
+                    if guard in v:
+                        field_meta[guard] = v[guard]
+            elif 'allOf' in v:
+                subschemas = v.get('allOf', [])
+                type_name = v.get('type')
+                if not type_name:
+                    for sub in subschemas:
+                        if 'type' in sub:
+                            type_name = sub['type']
+                            break
+                ttype = self.MAP_TTYPE.get(type_name, bases.JSONSchemaFieldDescriptor)
+                for guard in ('allOf', 'maxLength', 'minLength', 'enum', 'minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum', 'multipleOf', 'not', 'anyOf', 'oneOf'):
+                    if guard in v:
+                        field_meta[guard] = v[guard]
+            elif 'oneOf' in v:
+                subschemas = v.get('oneOf', [])
+                type_name = v.get('type')
+                if not type_name:
+                    for sub in subschemas:
+                        if 'type' in sub:
+                            type_name = sub['type']
+                            break
+                ttype = self.MAP_TTYPE.get(type_name, bases.JSONSchemaFieldDescriptor)
+                for guard in ('oneOf', 'maxLength', 'minLength', 'enum', 'minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum', 'multipleOf', 'not', 'anyOf', 'allOf'):
+                    if guard in v:
+                        field_meta[guard] = v[guard]
+            elif 'not' in v:
+                type_name = v.get('type')
+                ttype = self.MAP_TTYPE.get(type_name, bases.JSONSchemaFieldDescriptor)
+                for guard in ('not', 'maxLength', 'minLength', 'enum', 'minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum', 'multipleOf', 'anyOf', 'allOf', 'oneOf'):
+                    if guard in v:
+                        field_meta[guard] = v[guard]
             else:
-                print('not a built-in')
-                entry += (1, )
+                ttype = self.MAP_TTYPE.get(v.get('type', 'string'), bases.JSONSchemaFieldDescriptor)
+                for guard in ('maxLength', 'minLength', 'enum', 'minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum', 'multipleOf', 'not', 'anyOf', 'allOf', 'oneOf'):
+                    if guard in v:
+                        field_meta[guard] = v[guard]
 
+            if k in required_fields:
+                if 'default' in v:
+                    desc_inst = ttype(default=v.get('default'), metadata=field_meta)
+                    desc_inst.__set_name__(None, k)
+                    fields_with_defaults.append((k, ttype, desc_inst))
+                else:
+                    desc_inst = ttype(metadata=field_meta)
+                    desc_inst.__set_name__(None, k)
+                    fields.append((k, ttype, desc_inst))
+            else:
+                if 'default' in v:
+                    default_val = v.get('default')
+                else:
+                    default_factory = DEFAULT_FACTORIES.get(v.get('type'), str)
+                    default_val = default_factory() if callable(default_factory) else default_factory
+                desc_inst = ttype(default=default_val, metadata=field_meta)
+                desc_inst.__set_name__(None, k)
+                fields_with_defaults.append((k, ttype, desc_inst))
 
-        return (fields, fields_with_defaults)
+        return fields, fields_with_defaults
 
     def register(self, schema: dict) -> bool:
         if not utils.is_schema_toplevel_object(schema):
@@ -294,12 +325,35 @@ class SchemaModelFactoryV2(SchemaModelFactory):
 
         fields, fields_with_defaults = self.process_object(schema, required_fields=required_fields)
 
+        dataclass_fields = []
+        descriptors_to_attach = {}
+
+        for item in fields:
+            k, desc_cls, desc_inst = item
+            dataclass_fields.append((k, desc_cls))
+            descriptors_to_attach[k] = desc_inst
+
+        for item in fields_with_defaults:
+            k, desc_cls, desc_inst = item
+            dataclass_fields.append((k, desc_cls, desc_inst))
+            descriptors_to_attach[k] = desc_inst
+
+        prop_keys = list(schema.get('properties', {}).keys())
+
         dklass = make_dataclass(
             klassname,
-            fields + fields_with_defaults,
+            dataclass_fields,
             frozen=True,
-            )
-        setattr(self.dmod,
-                klassname,
-                dklass)
+            namespace={
+                'tocsv': lambda self, header=False, fields=prop_keys: f'{",".join(fields)}\n{",".join(map(lambda i: str(asdict(self)[i]), fields))}' if header else ",".join(map(lambda i: str(asdict(self)[i]), fields)),
+                'tolist': lambda self: list(asdict(self).values()),
+                'todict': lambda self: asdict(self),
+            }
+        )
+
+        for k, desc_inst in descriptors_to_attach.items():
+            desc_inst.__set_name__(dklass, k)
+            setattr(dklass, k, desc_inst)
+
+        setattr(self.dmod, klassname, dklass)
         return True
