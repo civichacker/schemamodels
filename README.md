@@ -117,4 +117,4 @@ Below is the current support status for the keywords defined in [Section 6 (A Vo
 
 This codebase is licensed under the GPLv3+ and therefore the use, inclusion, modification, and distribution of this software is governed by the GPL.
 
-To opt-out of the obligations of the GPL, inquire about the commercial license by sending an email to: license@civichacker.com.
+To opt-out of the obligations of the GPL, inquire about the commercial license by sending an email to: license AT civichacker.com.
