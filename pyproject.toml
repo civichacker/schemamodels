@@ -7,17 +7,22 @@ license = "GPL-3.0-or-later"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.11"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.2.0"
 ipython = "^8.10.0"
 jsonschema = "^4.17.3"
 vulture = "^2.6"
-flake8 = { version = "^6.0.0", python = ">=3.8.1" }
+flake8 = { version = "^6.0.0", python = ">=3.11" }
 pytest-cov = "^4.0.0"
 reuse = "^1.1.2"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "ruff (>=0.17.3,<0.18.0)"
+]
