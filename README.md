@@ -86,6 +86,33 @@ These basic checks are performed _every time_ you create a new instance of a gen
 - Are the required fields present?
 - Does the input match the datatype expectations set forth by the generated dataclass?
 
+## JSON Schema 2020-12 Structural Validation Support
+
+Below is the current support status for the keywords defined in [Section 6 (A Vocabulary for Structural Validation)](https://json-schema.org/draft/2020-12/json-schema-validation#name-a-vocabulary-for-structural) of the JSON Schema 2020-12 specification:
+
+| Keyword | Section | Category | Supported |
+| --- | --- | --- | --- |
+| `type` | 6.1.1 | Any Instance Type | Yes |
+| `enum` | 6.1.2 | Any Instance Type | Yes |
+| `const` | 6.1.3 | Any Instance Type | No |
+| `multipleOf` | 6.2.1 | Numeric Instances | Yes |
+| `maximum` | 6.2.2 | Numeric Instances | Yes |
+| `exclusiveMaximum` | 6.2.3 | Numeric Instances | Yes |
+| `minimum` | 6.2.4 | Numeric Instances | Yes |
+| `exclusiveMinimum` | 6.2.5 | Numeric Instances | Yes |
+| `maxLength` | 6.3.1 | String Instances | Yes |
+| `minLength` | 6.3.2 | String Instances | Yes |
+| `pattern` | 6.3.3 | String Instances | No |
+| `maxItems` | 6.4.1 | Array Instances | No |
+| `minItems` | 6.4.2 | Array Instances | No |
+| `uniqueItems` | 6.4.3 | Array Instances | No |
+| `maxContains` | 6.4.4 | Array Instances | No |
+| `minContains` | 6.4.5 | Array Instances | No |
+| `maxProperties` | 6.5.1 | Object Instances | No |
+| `minProperties` | 6.5.2 | Object Instances | No |
+| `required` | 6.5.3 | Object Instances | Yes |
+| `dependentRequired` | 6.5.4 | Object Instances | No |
+
 ## License
 
 This codebase is licensed under the GPLv3+ and therefore the use, inclusion, modification, and distribution of this software is governed by the GPL.
