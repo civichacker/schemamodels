@@ -1,15 +1,10 @@
 from dataclasses import make_dataclass
-
-from schemamodels import SchemaModelFactoryV2, bases
-
-from schemamodels import v2
-from schemamodels import exceptions as e
 from typing import TypeVar
 
-
-
-
 import pytest
+
+from schemamodels import SchemaModelFactoryV2, bases, v2
+from schemamodels import exceptions as e
 
 T = TypeVar('T', str, int, float, bool, None)
 C = TypeVar('C', list, tuple)

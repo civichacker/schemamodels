@@ -2,11 +2,14 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 from abc import ABC, abstractmethod
-from functools import partial
-from typing import Callable, Protocol, TypeVar, Generic, AnyStr, get_args, Any
-from schemamodels import exceptions as e
-from operator import contains, le, ge, gt, lt, mod, not_
+from collections.abc import Callable
 from contextlib import contextmanager
+from functools import partial
+from operator import contains, ge, gt, le, lt, mod, not_
+from typing import Any, AnyStr, Protocol, TypeVar, get_args
+
+from schemamodels import exceptions as e
+
 
 class BaseErrorHandler(ABC):
 

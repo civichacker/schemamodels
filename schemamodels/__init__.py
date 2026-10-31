@@ -1,20 +1,26 @@
 # SPDX-FileCopyrightText: 2023 Civic Hacker, LLC
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-import sys
-from dataclasses import make_dataclass, field, fields as fs, asdict, Field
-from dataclasses import MISSING
 import importlib
-from operator import xor, not_
-from typing import Callable, Deque, TypeVar, get_args
-from collections import deque
+import sys
 import types
+from collections import deque
+from collections.abc import Callable
+from dataclasses import MISSING, Field, asdict, field, make_dataclass
+from dataclasses import fields as fs
+from functools import partial, partialmethod, reduce
+from operator import not_, xor
+from typing import Deque, TypeVar, get_args
 
-from functools import partial, reduce, partialmethod
-
-from schemamodels import exceptions as e, bases, utils, v2
-from schemamodels.bases import BaseRenderer, BaseErrorHandler
-from schemamodels.constants import COMPARISONS, PORCELINE_KEYWORDS, JSON_TYPE_MAP, DEFAULT_FACTORIES
+from schemamodels import bases, utils, v2
+from schemamodels import exceptions as e
+from schemamodels.bases import BaseErrorHandler, BaseRenderer
+from schemamodels.constants import (
+    COMPARISONS,
+    DEFAULT_FACTORIES,
+    JSON_TYPE_MAP,
+    PORCELINE_KEYWORDS,
+)
 
 
 class DefaultErrorHandler(bases.BaseErrorHandler):
@@ -105,7 +111,7 @@ class SchemaModelFactory:
         self.error_handler()
         self.renderer()
 
-    def construct_dataclass(self, klassname: str, schema: dict, fields: Deque, fields_with_defaults: Deque) -> Callable:
+    def construct_dataclass(self, klassname: str, schema: dict, fields: deque, fields_with_defaults: deque) -> Callable:
         return partial(
             make_dataclass,
             klassname,
@@ -146,7 +152,7 @@ class SchemaModelFactory:
                 entry += (JSON_TYPE_MAP.get(v.get('type')), )
                 field_spec.update(default_factory=DEFAULT_FACTORIES[v.get('type')])
             elif v.get('type') == 'object':
-                fs, fswd = self.process_object(v.get('properties'))
+                fs, _ = self.process_object(v.get('properties'))
                 entry += (k, fs)
                 field_spec.update(default_factory=DEFAULT_FACTORIES[v.get('type')])
             else:

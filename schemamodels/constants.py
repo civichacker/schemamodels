@@ -1,7 +1,6 @@
-from functools import partial
-from operator import gt, ge, lt, le, mod, contains
 from collections import ChainMap
-
+from functools import partial
+from operator import contains, ge, gt, le, lt, mod
 
 DEFAULT_FACTORIES = {
     'string': str,

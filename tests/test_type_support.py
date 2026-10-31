@@ -1,16 +1,14 @@
 # SPDX-FileCopyrightText: 2023 Civic Hacker, LLC <opensource@civichacker.com>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from jsonschema import validators
-import json
 import importlib
+import json
 from dataclasses import FrozenInstanceError
 
-from schemamodels import exceptions, bases, COMPARISONS
-from schemamodels import generate_functors
-
-
 import pytest
+from jsonschema import validators
+
+from schemamodels import COMPARISONS, bases, exceptions, generate_functors
 
 
 def test_absent_is_not_none(Factory):
@@ -158,7 +156,11 @@ def test_numeric_range_support(Factory):
     sm = Factory(schemas=[eminrange, emaxrange])
     sm.register(irange)
 
-    from schemamodels.dynamic import InclusiveRange, ExclusiveMaxRange, ExclusiveMinRange
+    from schemamodels.dynamic import (
+        ExclusiveMaxRange,
+        ExclusiveMinRange,
+        InclusiveRange,
+    )
 
     with pytest.raises(exceptions.RangeConstraintViolation):
         InclusiveRange(rating=6)
@@ -337,7 +339,7 @@ def test_anyof_support(Factory, anyof_schema):
 
     assert hasattr(lib, 'AnyOfSchema')
 
-    AnyOfSchema = getattr(lib, 'AnyOfSchema')
+    AnyOfSchema = lib.AnyOfSchema
     AnyOfSchema(provider_id=1.4, brand_name="a")
     AnyOfSchema(provider_id=4, brand_name="a")
     with pytest.raises(Exception):
@@ -377,7 +379,7 @@ def test_allof_support(Factory):
 
     assert hasattr(lib, 'AllOfSchema')
 
-    AllOfSchema = getattr(lib, 'AllOfSchema')
+    AllOfSchema = lib.AllOfSchema
     AllOfSchema(provider_id=1343, brand_name="abcd")
     with pytest.raises(exceptions.SubSchemaFailureViolation):
         AllOfSchema(provider_id=1343, brand_name="abcdefgh")
@@ -416,7 +418,7 @@ def test_oneof_support(Factory):
 
     assert hasattr(lib, 'OneOfSchema')
 
-    OneOfSchema = getattr(lib, 'OneOfSchema')
+    OneOfSchema = lib.OneOfSchema
     OneOfSchema(provider_id=3, brand_name="abcd")
     OneOfSchema(provider_id=5, brand_name="abcd")
     with pytest.raises(exceptions.SubSchemaFailureViolation):
@@ -455,7 +457,7 @@ def test_not_support(Factory):
 
     assert hasattr(lib, 'NotSchema')
 
-    NotSchema = getattr(lib, 'NotSchema')
+    NotSchema = lib.NotSchema
     NotSchema(provider_id=5, brand_name="abcd")
     with pytest.raises(exceptions.SubSchemaFailureViolation):
         NotSchema(provider_id="welp", brand_name="abcde")
@@ -556,7 +558,7 @@ def test_enum_support(Factory):
 
     assert hasattr(lib, 'EnumSchema')
 
-    EnumSchema = getattr(lib, 'EnumSchema')
+    EnumSchema = lib.EnumSchema
     EnumSchema(handiness="left", brand_name="abcd")
     with pytest.raises(exceptions.ValueTypeViolation):
         EnumSchema(handiness="welp", brand_name="abcde")
@@ -572,7 +574,7 @@ def test_export_funcs(enum_field_schema, Factory):
 
     assert hasattr(lib, 'EnumSchema')
 
-    EnumSchema = getattr(lib, 'EnumSchema')
+    EnumSchema = lib.EnumSchema
     e = EnumSchema(handiness="left", brand_name="abcd")
     assert e.tocsv(fields=['handiness', 'brand_name']) == "left,abcd"
     assert e.tocsv(header=True) == "handiness,brand_name\nleft,abcd"
@@ -594,7 +596,7 @@ def test_simple_object_support(simple_schema, Factory):
 
     assert hasattr(lib, 'SimpleSchema')
 
-    SimpleSchema = getattr(lib, 'SimpleSchema')
+    SimpleSchema = lib.SimpleSchema
     SimpleSchema(provider_id=4, brand_name="abcd")
     with pytest.raises(exceptions.ValueTypeViolation):
         SimpleSchema(provider_id="welp", brand_name="abcde")

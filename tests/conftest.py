@@ -1,6 +1,8 @@
 import json
+
 import pytest
-from schemamodels import SchemaModelFactoryV2, SchemaModelFactory
+
+from schemamodels import SchemaModelFactory, SchemaModelFactoryV2
 
 
 @pytest.fixture(scope="session", autouse=True)

@@ -1,6 +1,6 @@
 import pytest
-from schemamodels import exceptions
-from schemamodels import utils
+
+from schemamodels import exceptions, utils
 
 
 @pytest.mark.struct
