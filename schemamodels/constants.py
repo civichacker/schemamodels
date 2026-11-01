@@ -38,18 +38,6 @@ PORCELINE_KEYWORDS = [
 ]
 
 
-COLLECTIONS = {
-    "anyOf": lambda d: partial(
-        lambda struct: __import__("schemamodels").generate_functors(struct), d
-    ),
-    "allOf": lambda d: partial(
-        lambda struct: __import__("schemamodels").generate_functors(struct), d
-    ),
-    "oneOf": lambda d: partial(
-        lambda struct: __import__("schemamodels").generate_functors(struct), d
-    ),
-}
-
 COMPARISONS = {
     "type": lambda d: JSON_TYPE_MAP[d],
     "not": lambda d: not_(d),

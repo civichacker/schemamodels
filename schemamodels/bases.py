@@ -39,7 +39,6 @@ class BaseRenderer(ABC):
 
 
 A = TypeVar("A")
-U = TypeVar("U", int, str)
 T = TypeVar("T", bound=str)
 N = TypeVar("N", int, float)
 S = TypeVar("S", bound=None)
