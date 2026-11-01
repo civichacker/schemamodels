@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2023-2026 Civic Hacker LLC
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 from typing import Generic, TypeVar
 
 from schemamodels import exceptions as e
