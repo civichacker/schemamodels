@@ -47,7 +47,7 @@ O = TypeVar("O", bound=dict)  # noqa: E741
 B = TypeVar("B", bound=bool)
 
 
-def validate_subschema(subschema: dict, value: Any) -> bool:
+def validate_subschema(subschema: dict, value: Any) -> bool:  # noqa: C901
     if not isinstance(subschema, dict):
         return True
     if "type" in subschema:

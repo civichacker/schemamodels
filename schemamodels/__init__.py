@@ -289,7 +289,7 @@ class SchemaModelFactoryV2(SchemaModelFactory):
 
         return DynamicDescriptor
 
-    def process_object(
+    def process_object(  # noqa: C901
         self, schema: dict, required_fields: list | None = None
     ) -> tuple:
         required_fields = (
