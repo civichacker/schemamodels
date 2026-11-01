@@ -147,7 +147,7 @@ class SchemaModelFactory:
             namespace={
                 "_errorhandler": self.error_handler.apply,
                 "_renderer": self.renderer.apply,
-                "tocsv": lambda self, header=False, fields=schema["properties"].keys(): (
+                "tocsv": lambda self, header=False, fields=schema["properties"].keys(): (  # noqa: B008
                     f"{','.join(fields)}\n{','.join(asdict(self)[i] for i in fields)}"
                     if header
                     else ",".join(asdict(self)[i] for i in fields)
