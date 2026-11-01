@@ -43,7 +43,7 @@ T = TypeVar("T", bound=str)
 N = TypeVar("N", int, float)
 S = TypeVar("S", bound=None)
 C = TypeVar("C", list, tuple)
-O = TypeVar("O", bound=dict)
+O = TypeVar("O", bound=dict)  # noqa: E741
 B = TypeVar("B", bound=bool)
 
 
