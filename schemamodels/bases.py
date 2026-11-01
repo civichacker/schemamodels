@@ -141,15 +141,11 @@ class JSONSchemaFieldDescriptor(Protocol[A]):
             ):
                 raise e.SubSchemaFailureViolation("all of the subschemas failed")
             if "allOf" in self._metadata and not all(
-                    validate_subschema(s, value) for s in self._metadata["allOf"]
-                ):
+                validate_subschema(s, value) for s in self._metadata["allOf"]
+            ):
                 raise e.SubSchemaFailureViolation("at least one subschema failed")
             if "oneOf" in self._metadata and (
-                sum(
-                    1
-                    for s in self._metadata["oneOf"]
-                    if validate_subschema(s, value)
-                )
+                sum(1 for s in self._metadata["oneOf"] if validate_subschema(s, value))
                 != 1
             ):
                 raise e.SubSchemaFailureViolation(
