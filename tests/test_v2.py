@@ -534,3 +534,30 @@ def test_schema_model_factory_v2_full_model():
     # Validation failure on balance type
     with pytest.raises(e.ValueTypeViolation):
         ComprehensiveVtwoUserSchema(username="john_doe", age=25, balance="100.0")
+
+
+
+@pytest.mark.v2
+@pytest.mark.descriptor
+@pytest.mark.multierror
+def test_schema_model_factory_v2_multiple_errors():
+    schema = {
+        "$id": "https://example.com/user.schema.json",
+        "title": "comprehensive-vtwo-user-schema",
+        "type": "object",
+        "properties": {
+            "username": {"type": "string", "minLength": 3, "maxLength": 10},
+            "age": {"type": "integer", "minimum": 18},
+            "balance": {"type": "number", "minimum": 0.0},
+            "is_active": {"type": "boolean", "default": True},
+            "notes": {"type": "null", "default": None},
+        },
+        "required": ["username", "age", "balance"],
+    }
+
+    SchemaModelFactoryV2(schemas=[schema])
+    from schemamodels.dynamic import ComprehensiveVtwoUserSchema
+
+    # Validation failure on required string length
+    with pytest.RaisesGroup(e.LengthConstraintViolation, e.RangeConstraintViolation):
+        ComprehensiveVtwoUserSchema(username="jo", age=16, balance=100.0)
