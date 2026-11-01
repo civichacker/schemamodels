@@ -22,19 +22,14 @@ class ValidationCollector:
         self._token = _CURRENT_VALIDATION_COLLECTOR.set(self)
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(self, *args) -> None:
+        """
+
+        :param args: This is really exc_type, exc_val, and exc_tb args
+        :return:
+        """
         if self._token is not None:
             _CURRENT_VALIDATION_COLLECTOR.reset(self._token)
-
-    def add_error(self, exc: e.SchemaViolation) -> None:
-        self.errors.append(exc)
-
-    def raise_if_errors(self) -> None:
-        if not self.errors:
-            return
-        if len(self.errors) == 1:
-            raise self.errors[0]
-        raise ExceptionGroup("Validation errors", self.errors)
 
 
 _CURRENT_VALIDATION_COLLECTOR: ContextVar[ValidationCollector | None] = ContextVar(

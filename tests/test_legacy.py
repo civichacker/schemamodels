@@ -37,7 +37,7 @@ def test_absent_is_not_none(Factory):
         assert sm.register(t)
 
         from schemamodels.dynamic import AbsentSchema
-    except exceptions.RequiredPropertyViolation:
+    except (ImportError, exceptions.MalformedSchemaViolation):
         assert False
 
     result = AbsentSchema(provider_id=1)
