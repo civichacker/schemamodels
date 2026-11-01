@@ -1,0 +1,675 @@
+# SPDX-FileCopyrightText: 2023-2026 Civic Hacker LLC
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+import importlib
+import json
+from dataclasses import FrozenInstanceError
+
+import pytest
+from jsonschema import validators
+
+from schemamodels import COMPARISONS, bases, exceptions, generate_functors
+
+
+def test_absent_is_not_none(Factory):
+    test = """
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "absent-schema",
+        "description": "",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "description": "this is a description",
+              "type": "integer"
+            },
+            "brand_name": {
+              "type": "string"
+            }
+        }
+    }
+    """
+    t = json.loads(test)
+    sm = Factory()
+
+    try:
+        assert sm.register(t)
+
+        from schemamodels.dynamic import AbsentSchema
+    except exceptions.RequiredPropertyViolation:
+        assert False
+
+    result = AbsentSchema(provider_id=1)
+    assert result.brand_name == ""
+
+
+def test_enforce_required(Factory):
+    test = """
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "required-schema",
+        "description": "",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "description": "this is a description",
+              "type": "integer"
+            },
+            "brand_name": {
+              "type": "string"
+            }
+        },
+        "required": ["brand_name"]
+    }
+    """
+    t = json.loads(test)
+    importlib.import_module("schemamodels.dynamic")
+    sm = Factory()
+    validators.Draft202012Validator.check_schema(t)
+
+    try:
+        assert sm.register(t)
+        from schemamodels.dynamic import RequiredSchema
+    except exceptions.RequiredPropertyViolation:
+        assert False
+
+    req = RequiredSchema(brand_name="wally")
+    assert req.brand_name is not None
+    assert req.brand_name != ""
+
+    with pytest.raises(TypeError):
+        RequiredSchema()
+    with pytest.raises(TypeError):
+        RequiredSchema(provider_id=1)
+
+
+def test_immutability(Factory):
+    test = """
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "immutable-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "description": "this is a description",
+              "type": "integer"
+            },
+            "brand_name": {
+              "type": "string"
+            }
+        }
+    }
+    """
+    t = json.loads(test)
+    sm = Factory()
+    sm.register(t)
+
+    from schemamodels.dynamic import ImmutableSchema
+
+    fs = ImmutableSchema(provider_id=1, brand_name="yo")
+
+    with pytest.raises(FrozenInstanceError):
+        fs.provider_id = 3
+
+
+def test_default_support(Factory):
+    test = """
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "default-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "description": "this is a description",
+              "default": 5,
+              "type": "integer"
+            },
+            "brand_name": {
+              "type": "string"
+            }
+        }
+    }
+    """
+    t = json.loads(test)
+    sm = Factory()
+    sm.register(t)
+
+    from schemamodels.dynamic import DefaultSchema
+
+    fs = DefaultSchema(brand_name="yo")
+
+    assert fs.provider_id == 5
+
+
+@pytest.mark.range
+def test_numeric_range_support(Factory):
+    inclusive_range = """
+    {
+        "title": "inclusive-range",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "rating": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 5
+            }
+        }
+    }
+    """
+    exclusive_max_range = """
+    {
+        "title": "exclusive-max-range",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "rating": {
+              "description": "this is a description",
+              "type": "number",
+              "minimum": 0,
+              "exclusiveMaximum": 5
+            }
+        }
+    }
+    """
+    exclusive_min_range = """
+    {
+        "title": "exclusive-min-range",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "rating": {
+              "description": "this is a description",
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 5
+            }
+        }
+    }
+    """
+    irange = json.loads(inclusive_range)
+    emaxrange = json.loads(exclusive_max_range)
+    eminrange = json.loads(exclusive_min_range)
+    sm = Factory(schemas=[eminrange, emaxrange])
+    sm.register(irange)
+
+    from schemamodels.dynamic import (
+        ExclusiveMaxRange,
+        ExclusiveMinRange,
+        InclusiveRange,
+    )
+
+    with pytest.raises(exceptions.RangeConstraintViolation):
+        InclusiveRange(rating=6)
+
+    with pytest.raises(exceptions.RangeConstraintViolation):
+        ExclusiveMaxRange(rating=5)
+
+    with pytest.raises(exceptions.RangeConstraintViolation):
+        ExclusiveMinRange(rating=0)
+
+
+@pytest.mark.multi
+def test_numeric_multiple_support(Factory):
+    multipleof = """
+    {
+        "title": "multiple-of",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "rating": {
+              "description": "this is a description",
+              "type": "number",
+              "multipleOf": 7
+            }
+        }
+    }
+    """
+    multi = json.loads(multipleof)
+    sm = Factory()
+    sm.register(multi)
+
+    from schemamodels.dynamic import MultipleOf
+
+    with pytest.raises(exceptions.RangeConstraintViolation):
+        MultipleOf(rating=20)
+
+
+@pytest.mark.string
+def test_string_maxlength_support(Factory):
+    maxlength = """
+    {
+        "title": "max-length",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "brand_name": {
+              "description": "this is a description",
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 5
+            }
+        }
+    }
+    """
+    multi = json.loads(maxlength)
+    sm = Factory()
+    sm.register(multi)
+
+    from schemamodels.dynamic import MaxLength
+
+    MaxLength(brand_name="abcd")
+    with pytest.raises(exceptions.LengthConstraintViolation):
+        MaxLength(brand_name="abcdefgh")
+    with pytest.raises(exceptions.LengthConstraintViolation):
+        MaxLength(brand_name="a")
+
+
+@pytest.mark.type
+def test_type_enforcement(Factory):
+    test = """
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "type-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "description": "this is a description",
+              "type": "integer"
+            },
+            "brand_name": {
+              "description": "this is a description",
+              "type": "string"
+            }
+        }
+    }
+    """
+    t = json.loads(test)
+    sm = Factory()
+    sm.register(t)
+
+    from schemamodels.dynamic import TypeSchema
+
+    with pytest.raises(exceptions.ValueTypeViolation):
+        TypeSchema(provider_id="a", brand_name="b")
+
+    with pytest.raises(exceptions.ValueTypeViolation):
+        TypeSchema(provider_id=1, brand_name=1)
+
+
+@pytest.mark.custom
+def test_custom_malformed_errorhandler(Factory):
+    test = """
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "fake-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "description": "this is a description",
+              "type": "integer"
+            },
+            "brand_name": {
+              "description": "this is a description",
+              "type": "string"
+            }
+        }
+    }
+    """
+
+    class MyCustomErrorHandler(bases.BaseErrorHandler):
+        pass
+
+    json.loads(test)
+
+    with pytest.raises(TypeError):
+        Factory(error_handler=MyCustomErrorHandler)
+
+    lib = importlib.import_module("schemamodels.dynamic")
+    assert not hasattr(lib, "FakeSchema")
+
+
+@pytest.mark.custom
+def test_custom_malformed_renderer(Factory):
+    test = """
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "fake-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "description": "this is a description",
+              "type": "integer"
+            },
+            "brand_name": {
+              "description": "this is a description",
+              "type": "string"
+            }
+        }
+    }
+    """
+
+    class MyCustomRenderer(bases.BaseRenderer):
+        pass
+
+    json.loads(test)
+    with pytest.raises(TypeError):
+        Factory(renderer=MyCustomRenderer)
+
+    lib = importlib.import_module("schemamodels.dynamic")
+    assert not hasattr(lib, "FakeSchema")
+
+
+@pytest.mark.anyof
+def test_anyof_support(Factory):
+    anyof = """
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "any-of-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "description": "this is a description",
+              "anyOf": [
+                {"type": "integer"},
+                {"type": "number"}
+              ]
+            },
+            "brand_name": {
+              "description": "this is a description",
+              "type": "string"
+            }
+        }
+    }
+    """
+
+    t = json.loads(anyof)
+    sm = Factory()
+    sm.register(t)
+
+    lib = importlib.import_module("schemamodels.dynamic")
+
+    assert hasattr(lib, "AnyOfSchema")
+
+    AnyOfSchema = lib.AnyOfSchema
+    AnyOfSchema(provider_id=1.4, brand_name="a")
+    AnyOfSchema(provider_id=4, brand_name="a")
+    if Factory.__name__ == "SchemaModelFactoryV2":
+        with pytest.raises(exceptions.ValueTypeViolation):
+            AnyOfSchema(provider_id="s", brand_name="a")
+
+    if Factory.__name__ == "SchemaModelFactory":
+        with pytest.raises(exceptions.SubSchemaFailureViolation):
+            AnyOfSchema(provider_id="s", brand_name="a")
+
+
+@pytest.mark.allof
+def test_allof_support(Factory):
+    allof = """
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "all-of-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "description": "this is a description",
+              "type": "integer"
+            },
+            "brand_name": {
+              "description": "this is a description",
+              "allOf": [
+                {"type": "string"},
+                {"maxLength": 5}
+              ]
+            }
+        }
+    }
+    """
+
+    t = json.loads(allof)
+    sm = Factory()
+    sm.register(t)
+
+    lib = importlib.import_module("schemamodels.dynamic")
+
+    assert hasattr(lib, "AllOfSchema")
+
+    AllOfSchema = lib.AllOfSchema
+    AllOfSchema(provider_id=1343, brand_name="abcd")
+    with pytest.raises(exceptions.SubSchemaFailureViolation):
+        AllOfSchema(provider_id=1343, brand_name="abcdefgh")
+
+
+@pytest.mark.oneof
+def test_oneof_support(Factory):
+    oneof = """
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "one-of-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "description": "this is a description",
+                "oneOf": [
+                    { "type": "number", "multipleOf": 5 },
+                    { "type": "number", "multipleOf": 3 }
+                ]
+            },
+            "brand_name": {
+              "description": "this is a description",
+                "type": "string"
+            }
+        }
+    }
+    """
+
+    t = json.loads(oneof)
+    sm = Factory()
+    sm.register(t)
+
+    lib = importlib.import_module("schemamodels.dynamic")
+
+    assert hasattr(lib, "OneOfSchema")
+
+    OneOfSchema = lib.OneOfSchema
+    OneOfSchema(provider_id=3, brand_name="abcd")
+    OneOfSchema(provider_id=5, brand_name="abcd")
+    with pytest.raises(exceptions.SubSchemaFailureViolation):
+        OneOfSchema(provider_id=15, brand_name="abcde")
+
+
+@pytest.mark.not_
+def test_not_support(Factory):
+    _not = """
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "not-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "description": "this is a description",
+                "not": {
+                    "type": "string"
+                }
+            },
+            "brand_name": {
+              "description": "this is a description",
+                "type": "string"
+            }
+        }
+    }
+    """
+
+    t = json.loads(_not)
+    sm = Factory()
+    sm.register(t)
+
+    lib = importlib.import_module("schemamodels.dynamic")
+
+    assert hasattr(lib, "NotSchema")
+
+    NotSchema = lib.NotSchema
+    NotSchema(provider_id=5, brand_name="abcd")
+    with pytest.raises(exceptions.SubSchemaFailureViolation):
+        NotSchema(provider_id="welp", brand_name="abcde")
+
+
+@pytest.mark.cell
+def test_type_comparison(Factory):
+    schema = {"type": "number", "maximum": 5, "value": 10}
+    assert COMPARISONS["type"](schema["type"])(schema["value"])
+
+
+@pytest.mark.cell
+def test_range_comparison(Factory):
+    over = {"type": "number", "maximum": 5, "value": 10}
+    under = {"type": "number", "maximum": 5, "value": 3}
+    assert not COMPARISONS["maximum"](over["maximum"])(over["value"])
+    assert COMPARISONS["maximum"](under["maximum"])(under["value"])
+
+
+@pytest.mark.cell
+def test_range_minmax_comparison(Factory):
+    over = {"type": "number", "minimum": 0, "maximum": 5, "value": 10}
+    under = {"type": "number", "minimum": 0, "maximum": 5, "value": -3}
+    assert not COMPARISONS["maximum"](over["maximum"])(over["value"])
+    assert COMPARISONS["minimum"](over["minimum"])(over["value"])
+    assert not COMPARISONS["minimum"](under["minimum"])(under["value"])
+    assert COMPARISONS["maximum"](under["maximum"])(under["value"])
+
+
+@pytest.mark.cell
+def test_functor_generator(Factory):
+    anyof = """
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "any-of-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "description": "this is a description",
+              "anyOf": [
+                {"type": "integer"},
+                {"type": "number"}
+              ]
+            },
+            "brand_name": {
+              "description": "this is a description",
+              "type": "string"
+            }
+        }
+    }
+    """
+
+    t = json.loads(anyof)
+    fn = None
+    anyof_collection = t["properties"]["provider_id"].get("anyOf", [])
+    funcs = (generate_functors(s) for s in anyof_collection)
+    real = lambda value: (f["type"](value) for f in funcs)
+    print({"anyOf": real})
+    fn = {"anyOf": real}
+
+    generate_functors(t["properties"]["provider_id"])
+    assert next(iter(fn.values()))(1.0)
+    assert next(iter(fn.values()))(1)
+    assert any(list(next(iter(fn.values()))(1.0)))
+    assert all(list(next(iter(fn.values()))("e")))
+
+
+@pytest.mark.enum
+def test_enum_support(Factory):
+    enum = """
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "enum-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "handiness": {
+                "description": "this is a description",
+                "enum": ["left", "right", "all", "none"],
+                "type": "string"
+            },
+            "brand_name": {
+                "description": "this is a description",
+                "type": "string"
+            }
+        }
+    }
+    """
+
+    t = json.loads(enum)
+    sm = Factory()
+    sm.register(t)
+
+    lib = importlib.import_module("schemamodels.dynamic")
+
+    assert hasattr(lib, "EnumSchema")
+
+    EnumSchema = lib.EnumSchema
+    EnumSchema(handiness="left", brand_name="abcd")
+    with pytest.raises(exceptions.ValueTypeViolation):
+        EnumSchema(handiness="welp", brand_name="abcde")
+
+
+@pytest.mark.export
+def test_export_funcs(Factory):
+    enum = """
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "enum-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "handiness": {
+                "description": "this is a description",
+                "enum": ["left", "right", "all", "none"],
+                "type": "string"
+            },
+            "brand_name": {
+                "description": "this is a description",
+                "type": "string"
+            }
+        }
+    }
+    """
+
+    t = json.loads(enum)
+    sm = Factory()
+    sm.register(t)
+
+    lib = importlib.import_module("schemamodels.dynamic")
+
+    assert hasattr(lib, "EnumSchema")
+
+    EnumSchema = lib.EnumSchema
+    e = EnumSchema(handiness="left", brand_name="abcd")
+    assert e.tocsv(fields=["handiness", "brand_name"]) == "left,abcd"
+    assert e.tocsv(header=True) == "handiness,brand_name\nleft,abcd"
+    assert e.todict() == {"handiness": "left", "brand_name": "abcd"}
+    assert "left" in e.tolist()
+    assert "abcd" in e.tolist()

@@ -1,8 +1,9 @@
-# SPDX-FileCopyrightText: 2023 Civic Hacker, LLC
+# SPDX-FileCopyrightText: 2023-2026 Civic Hacker LLC
 
 # SPDX-License-Identifier: CC0-1.0#
 
-__pycache__/
+**/__pycache__/
+profiling/
 *.pyc
 *.pyo
 *.swp
@@ -13,3 +14,5 @@ tox.ini
 pytest.ini
 .coverage
 *.json
+.env
+.idea/

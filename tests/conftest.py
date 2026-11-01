@@ -1,0 +1,152 @@
+# SPDX-FileCopyrightText: 2023-2026 Civic Hacker LLC
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+import json
+
+import pytest
+
+from schemamodels import SchemaModelFactory, SchemaModelFactoryV2
+
+
+@pytest.fixture(scope="session", autouse=True)
+def simple_schema():
+    test = """
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "simple-schema",
+        "description": "",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "description": "this is a description",
+              "type": "integer"
+            },
+            "brand_name": {
+              "type": "string"
+            }
+        }
+    }
+    """
+    yield json.loads(test)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def malformed_schema():
+    test = """
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "description": "",
+        "title": "malformed-object",
+        "type": "object"
+    }
+    """
+    yield json.loads(test)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def required_fields_schema():
+    test = """
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "required-schema",
+        "description": "",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "description": "this is a description",
+              "type": "integer"
+            },
+            "brand_name": {
+              "type": "string"
+            }
+        },
+        "required": ["brand_name"]
+    }
+    """
+
+    yield json.loads(test)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def default_value_schema():
+    test = """
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "default-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "description": "this is a description",
+              "default": 5,
+              "type": "integer"
+            },
+            "brand_name": {
+              "type": "string"
+            }
+        }
+    }
+    """
+    yield json.loads(test)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def enum_field_schema():
+    enum = """
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "enum-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "handiness": {
+                "description": "this is a description",
+                "enum": ["left", "right", "all", "none"],
+                "type": "string"
+            },
+            "brand_name": {
+                "description": "this is a description",
+                "type": "string"
+            }
+        }
+    }
+    """
+    yield json.loads(enum)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def anyof_schema():
+    yield json.loads("""
+    {
+        "$id": "https://schema.dev/fake-schema.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "any-of-schema",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "provider_id": {
+              "description": "this is a description",
+              "anyOf": [
+                {"type": "integer"},
+                {"type": "number"}
+              ]
+            },
+            "brand_name": {
+              "description": "this is a description",
+              "type": "string"
+            }
+        }
+    }
+    """)
+
+
+@pytest.fixture(
+    scope="session", autouse=True, params=[SchemaModelFactory, SchemaModelFactoryV2]
+)
+def Factory(request):
+    yield request.param
