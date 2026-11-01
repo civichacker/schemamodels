@@ -273,7 +273,11 @@ class SchemaModelFactoryV2(SchemaModelFactory):
                 super().__init__(default=default, metadata=metadata or {})
 
             def __set__(self, obj, value):
-                collector = bases._CURRENT_VALIDATION_COLLECTOR.get()
+                errors = (
+                    obj.__dict__.get("_validation_errors")
+                    if hasattr(obj, "__dict__")
+                    else None
+                )
                 try:
                     types_to_check = getattr(T, "__constraints__", ())
                     if types_to_check:
@@ -292,13 +296,19 @@ class SchemaModelFactoryV2(SchemaModelFactory):
                     with self.dynamic_child_descriptors(obj, value):
                         super().__set__(obj, value)
                 except e.SchemaViolation as exc:
-                    if collector is not None:
-                        collector.add_error(exc)
+                    if errors is not None:
+                        errors.append(exc)
                         if hasattr(obj, "__dict__"):
                             obj.__dict__[self._name] = value
-                        self.__dict__[self._name] = value
+                        else:
+                            self.__dict__[self._name] = value
                         return
                     raise
+
+                if hasattr(obj, "__dict__"):
+                    obj.__dict__[self._name] = value
+                else:
+                    self.__dict__[self._name] = value
 
         return DynamicDescriptor
 
@@ -493,12 +503,16 @@ class SchemaModelFactoryV2(SchemaModelFactory):
             frozen=True,
             namespace={
                 "tocsv": lambda self, header=False, fields=prop_keys: (
-                    f"{','.join(fields)}\n{','.join(str(asdict(self)[i]) for i in fields)}"
+                    f"{','.join(fields)}\n{','.join(str(getattr(self, i)) for i in fields)}"
                     if header
-                    else ",".join(str(asdict(self)[i]) for i in fields)
+                    else ",".join(str(getattr(self, i)) for i in fields)
                 ),
-                "tolist": lambda self: list(asdict(self).values()),
-                "todict": lambda self: asdict(self),
+                "tolist": lambda self, fields=prop_keys: [
+                    getattr(self, i) for i in fields
+                ],
+                "todict": lambda self, fields=prop_keys: {
+                    i: getattr(self, i) for i in fields
+                },
             },
         )
 
@@ -509,9 +523,14 @@ class SchemaModelFactoryV2(SchemaModelFactory):
         orig_init = dklass.__init__
 
         def wrapped_init(self, *args, **kwargs):
-            with bases.ValidationCollector() as collector:
-                orig_init(self, *args, **kwargs)
-            collector.raise_if_errors()
+            self.__dict__["_validation_errors"] = []
+            orig_init(self, *args, **kwargs)
+            errors = self.__dict__.pop("_validation_errors", [])
+            if not errors:
+                return
+            if len(errors) == 1:
+                raise errors[0]
+            raise ExceptionGroup("Validation errors", errors)
 
         dklass.__init__ = wrapped_init
 
