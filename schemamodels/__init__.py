@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import importlib
-import sys
 from collections import deque
 from collections.abc import Callable
 from dataclasses import MISSING, Field, asdict, field, make_dataclass
@@ -235,10 +234,7 @@ class SchemaModelFactory:
         dklass = self.construct_dataclass(
             klassname, schema, fields, fields_with_defaults
         )
-        if sys.version_info.major == 3 and sys.version_info.minor >= 10:
-            dataklass = dklass(slots=True)
-        else:
-            dataklass = dklass()
+        dataklass = dklass(slots=True)
         setattr(self.dmod, klassname, dataklass)
         return True
 
