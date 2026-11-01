@@ -342,7 +342,7 @@ def test_anyof_support(Factory, anyof_schema):
     AnyOfSchema = lib.AnyOfSchema
     AnyOfSchema(provider_id=1.4, brand_name="a")
     AnyOfSchema(provider_id=4, brand_name="a")
-    with pytest.raises(Exception):
+    with pytest.raises((exceptions.SubSchemaFailureViolation, exceptions.ValueTypeViolation)):
         AnyOfSchema(provider_id="s", brand_name="a")
 
 

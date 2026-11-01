@@ -265,7 +265,7 @@ def test_string_maxlength_support(Factory):
     from schemamodels.dynamic import MaxLength
 
     MaxLength(brand_name="abcd")
-    with pytest.raises(Exception):
+    with pytest.raises(exceptions.LengthConstraintViolation):
         MaxLength(brand_name="abcdefgh")
     with pytest.raises(exceptions.LengthConstraintViolation):
         MaxLength(brand_name="a")
