@@ -151,14 +151,14 @@ class JSONSchemaFieldDescriptor(Protocol[A]):
                 raise e.SubSchemaFailureViolation(
                     "none or multiple of the subschemas failed"
                 )
-            if "not" in self._metadata:
-                if validate_subschema(self._metadata["not"], value):
-                    raise e.SubSchemaFailureViolation("subschema failed")
-            if "enum" in self._metadata:
-                if value not in self._metadata["enum"]:
-                    raise e.ValueTypeViolation(
-                        f"{self._name}={value} =/= enum={self._metadata['enum']} constraint fails"
-                    )
+            if "not" in self._metadata and validate_subschema(
+                self._metadata["not"], value
+            ):
+                raise e.SubSchemaFailureViolation("subschema failed")
+            if "enum" in self._metadata and value not in self._metadata["enum"]:
+                raise e.ValueTypeViolation(
+                    f"{self._name}={value} =/= enum={self._metadata['enum']} constraint fails"
+                )
 
 
 class ArrayDescriptor(JSONSchemaFieldDescriptor[C]):
