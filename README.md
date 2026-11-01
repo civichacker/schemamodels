@@ -113,6 +113,30 @@ Below is the current support status for the keywords defined in [Section 6 (A Vo
 | `required` | 6.5.3 | Object Instances | Yes |
 | `dependentRequired` | 6.5.4 | Object Instances | No |
 
+## Benchmark Overview
+
+The performance benchmark evaluates `SchemaModelFactory` (V1, based on functor dispatch and metaprogramming) against `SchemaModelFactoryV2` (V2, based on the descriptor pattern for structural validation) across 4 schema workloads (`customer_record`, `ecommerce_order`, `sensor_telemetry`, and `simple_user`) with 10,000 iterations per workload.
+
+## Benchmark Comparison
+
+### Python 3.12.3 Execution Metrics
+
+| Phase | V1 Time (s) | V2 Time (s) | Speedup |
+| --- | --- | --- | --- |
+| Registration | 0.002731 | 0.002717 | 1.00x |
+| Instantiation & Validate | 0.395232 | 0.236198 | 1.67x |
+| Serialization (todict/csv) | 0.061095 | 0.093046 | 0.66x |
+| **Total Time** | **0.459057** | **0.331961** | **1.38x** |
+
+### Python 3.15.2 Execution Metrics
+
+| Phase | V1 Time (s) | V2 Time (s) | Speedup |
+| --- | --- | --- | --- |
+| Registration | 0.002112 | 0.001921 | 1.10x |
+| Instantiation & Validate | 0.372480 | 0.201000 | 1.85x |
+| Serialization (todict/csv) | 0.050852 | 0.083679 | 0.61x |
+| **Total Time** | **0.425444** | **0.286600** | **1.48x** |
+
 ## License
 
 This codebase is licensed under the GPLv3+ and therefore the use, inclusion, modification, and distribution of this software is governed by the GPL.
