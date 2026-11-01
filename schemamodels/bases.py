@@ -9,6 +9,7 @@ from operator import contains, ge, gt, le, lt, mod, not_
 from typing import Any, AnyStr, ClassVar, Protocol, TypeVar, get_args
 
 from schemamodels import exceptions as e
+from schemamodels.constants import JSON_TYPE_MAP
 
 
 class BaseErrorHandler(ABC):
@@ -140,11 +141,10 @@ class JSONSchemaFieldDescriptor(Protocol[A]):
                     validate_subschema(s, value) for s in self._metadata["anyOf"]
                 ):
                     raise e.SubSchemaFailureViolation("all of the subschemas failed")
-            if "allOf" in self._metadata:
-                if not all(
+            if "allOf" in self._metadata and not all(
                     validate_subschema(s, value) for s in self._metadata["allOf"]
                 ):
-                    raise e.SubSchemaFailureViolation("at least one subschema failed")
+                raise e.SubSchemaFailureViolation("at least one subschema failed")
             if "oneOf" in self._metadata:
                 if (
                     sum(
@@ -419,16 +419,6 @@ class SpecialKeywordDescriptor(JSONSchemaFieldDescriptor[A]):
 
 
 class CoreModel(dict):
-    JSON_TYPE_MAP: ClassVar[dict] = {
-        "string": lambda d: isinstance(d, str),
-        "object": lambda d: isinstance(d, dict),
-        "integer": lambda d: isinstance(d, int),
-        "number": lambda d: isinstance(d, (float, int)),
-        "null": lambda d: d is None,
-        "boolean": lambda d: isinstance(d, bool),
-        "array": lambda d: isinstance(d, (list, tuple)),
-    }
-
     COMPARISONS: ClassVar[dict] = {
         "type": lambda d: JSON_TYPE_MAP[d],
         "anyOf": lambda d: partial(
@@ -472,7 +462,7 @@ class CoreModel(dict):
         return TypeNode()
 
     def check(self, operand: dict):
-        if self.name in self.keys() and self.JSON_TYPE_MAP.get(self.type)(
+        if self.name in self.keys() and JSON_TYPE_MAP.get(self.type)(
             operand.get(self.name)
         ):
             return CoreModel(self)

@@ -19,6 +19,7 @@ DEFAULT_FACTORIES = {
 
 JSON_TYPE_MAP = {
     "string": lambda d: isinstance(d, str),
+    "object": lambda d: isinstance(d, dict),
     "integer": lambda d: isinstance(d, int),
     "number": lambda d: isinstance(d, (float, int)),
     "null": lambda d: d is None,
