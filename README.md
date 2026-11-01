@@ -123,19 +123,19 @@ The performance benchmark evaluates `SchemaModelFactory` (V1, based on functor d
 
 | Phase | V1 Time (s) | V2 Time (s) | Speedup |
 | --- | --- | --- | --- |
-| Registration | 0.002731 | 0.002717 | 1.00x |
-| Instantiation & Validate | 0.395232 | 0.236198 | 1.67x |
-| Serialization (todict/csv) | 0.061095 | 0.093046 | 0.66x |
-| **Total Time** | **0.459057** | **0.331961** | **1.38x** |
+| Registration | 0.010683 | 0.006158 | 1.73x |
+| Instantiation & Validate | 0.779191 | 0.265795 | 2.93x |
+| Serialization (todict/csv) | 0.148421 | 0.087137 | 1.70x |
+| **Total Time** | **0.938295** | **0.359090** | **2.61x** |
 
 ### Python 3.15.2 Execution Metrics
 
 | Phase | V1 Time (s) | V2 Time (s) | Speedup |
 | --- | --- | --- | --- |
-| Registration | 0.002112 | 0.001921 | 1.10x |
-| Instantiation & Validate | 0.372480 | 0.201000 | 1.85x |
-| Serialization (todict/csv) | 0.050852 | 0.083679 | 0.61x |
-| **Total Time** | **0.425444** | **0.286600** | **1.48x** |
+| Registration | 0.013948 | 0.005159 | 2.70x |
+| Instantiation & Validate | 0.594601 | 0.215846 | 2.75x |
+| Serialization (todict/csv) | 0.117880 | 0.084755 | 1.39x |
+| **Total Time** | **0.726429** | **0.305760** | **2.38x** |
 
 ## License
 
