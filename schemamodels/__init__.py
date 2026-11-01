@@ -3,14 +3,13 @@
 
 import importlib
 import sys
-import types
 from collections import deque
 from collections.abc import Callable
 from dataclasses import MISSING, Field, asdict, field, make_dataclass
 from dataclasses import fields as fs
-from functools import partial, partialmethod, reduce
+from functools import partial, reduce
 from operator import not_, xor
-from typing import Deque, TypeVar, get_args
+from typing import ClassVar, TypeVar
 
 from schemamodels import bases, exceptions, utils, v2
 from schemamodels import exceptions as e
@@ -226,7 +225,7 @@ class SchemaModelFactory:
 
 class SchemaModelFactoryV2(SchemaModelFactory):
 
-    MAP_TTYPE = {
+    MAP_TTYPE: ClassVar[dict] = {
         'string': bases.StringDescriptor,
         'number': bases.NumberDescriptor,
         'integer': bases.IntegerDescriptor,

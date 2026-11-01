@@ -1,7 +1,6 @@
 # SPDX-FileCopyrightText: 2023-2026 Civic Hacker LLC
 # SPDX-License-Identifier: GPL-3.0-or-later
-
-from typing import Generic, TypeVar
+from typing import ClassVar, Generic, TypeVar
 
 from schemamodels import exceptions as e
 from schemamodels.bases import (
@@ -27,7 +26,7 @@ def process_keys(structure: dict):
 
 class ScalarDescriptor(Generic[T]):
 
-    JSON_TYPE_MAP = {
+    JSON_TYPE_MAP: ClassVar[dict] = {
         'string': lambda d: isinstance(d, str),
         'integer': lambda d: isinstance(d, int),
         'number': lambda d: isinstance(d, (float, int)),
