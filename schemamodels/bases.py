@@ -10,7 +10,7 @@ from operator import contains, ge, gt, le, lt, mod, not_
 from typing import Any, AnyStr, ClassVar, Protocol, TypeVar, get_args
 
 from schemamodels import exceptions as e
-from schemamodels.constants import JSON_TYPE_MAP
+from schemamodels.constants import JSON_TYPE_MAP, REQUIRED_MISSING
 
 
 class ValidationCollector:
@@ -177,6 +177,8 @@ class JSONSchemaFieldDescriptor(Protocol[A]):
             else None
         )
         try:
+            if value is REQUIRED_MISSING:
+                raise e.RequiredPropertyViolation(f"{self._name} is a required property")
             if hasattr(self, "__orig_bases__") and self.__orig_bases__:
                 args = get_args(self.__orig_bases__[0])
                 if args:
@@ -225,6 +227,8 @@ class ArrayDescriptor(JSONSchemaFieldDescriptor[C]):
             else None
         )
         try:
+            if value is REQUIRED_MISSING:
+                raise e.RequiredPropertyViolation(f"{self._name} is a required property")
             if not isinstance(value, (list, tuple)):
                 raise e.ValueTypeViolation("expected array")
             if self._enum is not None and value not in self._enum:
@@ -260,6 +264,8 @@ class BooleanDescriptor(JSONSchemaFieldDescriptor[B]):
             else None
         )
         try:
+            if value is REQUIRED_MISSING:
+                raise e.RequiredPropertyViolation(f"{self._name} is a required property")
             if type(value) is not bool and not isinstance(value, bool):
                 raise e.ValueTypeViolation("expected boolean")
             if self._enum is not None and value not in self._enum:
@@ -295,6 +301,8 @@ class ObjectDescriptor(JSONSchemaFieldDescriptor[O]):
             else None
         )
         try:
+            if value is REQUIRED_MISSING:
+                raise e.RequiredPropertyViolation(f"{self._name} is a required property")
             if not isinstance(value, dict):
                 raise e.ValueTypeViolation("expected object")
             if self._enum is not None and value not in self._enum:
@@ -330,6 +338,8 @@ class NullDescriptor(JSONSchemaFieldDescriptor[S]):
             else None
         )
         try:
+            if value is REQUIRED_MISSING:
+                raise e.RequiredPropertyViolation(f"{self._name} is a required property")
             if value is not None:
                 raise e.ValueTypeViolation("expected null")
             if self._enum is not None and value not in self._enum:
@@ -378,6 +388,8 @@ class CollectionDescriptor(JSONSchemaFieldDescriptor[C]):
             else None
         )
         try:
+            if value is REQUIRED_MISSING:
+                raise e.RequiredPropertyViolation(f"{self._name} is a required property")
             if not isinstance(value, (list, tuple, set)):
                 raise e.ValueTypeViolation("expected collection")
             if self._min_length is not None and len(value) < self._min_length:
@@ -434,6 +446,8 @@ class StringDescriptor(JSONSchemaFieldDescriptor[AnyStr]):
             else None
         )
         try:
+            if value is REQUIRED_MISSING:
+                raise e.RequiredPropertyViolation(f"{self._name} is a required property")
             if type(value) is not str and not isinstance(value, (str, bytes)):
                 raise e.ValueTypeViolation("expected string")
             if self._min_length is not None and len(value) < self._min_length:
@@ -505,6 +519,8 @@ class IntegerDescriptor(JSONSchemaFieldDescriptor[int]):
             else None
         )
         try:
+            if value is REQUIRED_MISSING:
+                raise e.RequiredPropertyViolation(f"{self._name} is a required property")
             if type(value) is bool or not isinstance(value, int):
                 raise e.ValueTypeViolation("expected integer")
             if self._minimum is not None and value < self._minimum:
@@ -594,6 +610,8 @@ class NumberDescriptor(JSONSchemaFieldDescriptor[N]):
             else None
         )
         try:
+            if value is REQUIRED_MISSING:
+                raise e.RequiredPropertyViolation(f"{self._name} is a required property")
             if type(value) is bool or not isinstance(value, (int, float)):
                 raise e.ValueTypeViolation("expected number")
             if self._minimum is not None and value < self._minimum:

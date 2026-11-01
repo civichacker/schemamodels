@@ -79,9 +79,9 @@ def test_enforce_required(Factory):
     assert req.brand_name is not None
     assert req.brand_name != ""
 
-    with pytest.raises(TypeError):
+    with pytest.raises(exceptions.RequiredPropertyViolation):
         RequiredSchema()
-    with pytest.raises(TypeError):
+    with pytest.raises(exceptions.RequiredPropertyViolation):
         RequiredSchema(provider_id=1)
 
 

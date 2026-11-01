@@ -4,6 +4,8 @@
 from functools import partial
 from operator import contains, ge, gt, le, lt, mod, not_
 
+REQUIRED_MISSING = object()
+
 DEFAULT_FACTORIES = {
     "string": str,
     "integer": int,

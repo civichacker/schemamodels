@@ -18,6 +18,7 @@ from schemamodels.constants import (
     DEFAULT_FACTORIES,
     JSON_TYPE_MAP,
     PORCELINE_KEYWORDS,
+    REQUIRED_MISSING,
 )
 
 __all__ = [
@@ -25,6 +26,7 @@ __all__ = [
     "DEFAULT_FACTORIES",
     "JSON_TYPE_MAP",
     "PORCELINE_KEYWORDS",
+    "REQUIRED_MISSING",
     "DefaultErrorHandler",
     "DefaultRenderer",
     "SchemaModelFactory",
@@ -61,14 +63,25 @@ class DefaultErrorHandler(bases.BaseErrorHandler):
 
     @classmethod
     def apply(cls, instance: object) -> object:
-        fields_with_metadata = filter(lambda f: f.metadata != {}, fs(instance))
+        errors = []
+        for f in fs(instance):
+            val = getattr(instance, f.name)
+            if val is REQUIRED_MISSING:
+                errors.append(
+                    e.RequiredPropertyViolation(f"{f.name} is a required property")
+                )
+
+        fields_with_metadata = [
+            f
+            for f in fs(instance)
+            if f.metadata != {} and getattr(instance, f.name) is not REQUIRED_MISSING
+        ]
         final_form = [
             {"value": getattr(instance, f.name), "name": f.name, "metadata": f.metadata}
             for f in fields_with_metadata
         ]
 
         nodes = process_functors(final_form)
-        errors = []
 
         for n in nodes:
             for k, valid in n.items():
@@ -203,6 +216,9 @@ class SchemaModelFactory:
             if "default" in v:
                 field_spec.update(default=v.get("default", Field))
                 field_spec.pop("default_factory", None)
+            elif k in required_fields:
+                field_spec.update(default=REQUIRED_MISSING)
+                field_spec.pop("default_factory", None)
             else:
                 field_spec.update(
                     default_factory=DEFAULT_FACTORIES.get(v.get("type"), str)
@@ -211,22 +227,25 @@ class SchemaModelFactory:
             field_meta.update(generate_functors(v))
             field_spec.update(metadata=field_meta)
 
-            if k in required_fields:
-                field_spec.update(default_factory=MISSING)
-                field_spec.update(default=MISSING)
-
             entry += (field(**field_spec),)
-
-            if not hasattr(entry, "default"):
-                fields.appendleft(entry)
-            else:
-                fields.append(entry)
+            fields.append(entry)
 
         return (fields, fields_with_defaults)
 
     def register(self, schema: dict) -> bool:
         if not utils.is_schema_toplevel_object(schema):
             raise e.MalformedSchemaViolation()
+
+        if "required" in schema:
+            req = schema["required"]
+            if (
+                not isinstance(req, list)
+                or not all(isinstance(x, str) for x in req)
+                or len(req) != len(set(req))
+            ):
+                raise e.MalformedSchemaViolation(
+                    "required keyword must be an array of unique strings"
+                )
 
         klassname = utils.generate_classname(schema.get("title"))
         required_fields = schema.get("required", [])
@@ -279,6 +298,10 @@ class SchemaModelFactoryV2(SchemaModelFactory):
                     else None
                 )
                 try:
+                    if value is REQUIRED_MISSING:
+                        raise e.RequiredPropertyViolation(
+                            f"{self._name} is a required property"
+                        )
                     types_to_check = getattr(T, "__constraints__", ())
                     if types_to_check:
                         if isinstance(value, bool) and bool not in types_to_check:
@@ -449,12 +472,10 @@ class SchemaModelFactoryV2(SchemaModelFactory):
             if k in required_fields:
                 if "default" in v:
                     desc_inst = ttype(default=v.get("default"), metadata=field_meta)
-                    desc_inst.__set_name__(None, k)
-                    fields_with_defaults.append((k, ttype, desc_inst))
                 else:
-                    desc_inst = ttype(metadata=field_meta)
-                    desc_inst.__set_name__(None, k)
-                    fields.append((k, ttype, desc_inst))
+                    desc_inst = ttype(default=REQUIRED_MISSING, metadata=field_meta)
+                desc_inst.__set_name__(None, k)
+                fields_with_defaults.append((k, ttype, desc_inst))
             else:
                 if "default" in v:
                     default_val = v.get("default")
@@ -474,6 +495,17 @@ class SchemaModelFactoryV2(SchemaModelFactory):
     def register(self, schema: dict) -> bool:
         if not utils.is_schema_toplevel_object(schema):
             raise e.MalformedSchemaViolation()
+
+        if "required" in schema:
+            req = schema["required"]
+            if (
+                not isinstance(req, list)
+                or not all(isinstance(x, str) for x in req)
+                or len(req) != len(set(req))
+            ):
+                raise e.MalformedSchemaViolation(
+                    "required keyword must be an array of unique strings"
+                )
 
         klassname = utils.generate_classname(schema.get("title"))
         required_fields = schema.get("required", [])
