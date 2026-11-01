@@ -18,20 +18,20 @@ from schemamodels.bases import (
     CollectionDescriptor as BaseCollectionDescriptor,
 )
 
-T = TypeVar('T', bound=str)
+T = TypeVar("T", bound=str)
+
 
 def process_keys(structure: dict):
-    yield from set(structure.get('properties', {}).keys()) - {'$id', '$schema'}
+    yield from set(structure.get("properties", {}).keys()) - {"$id", "$schema"}
 
 
 class ScalarDescriptor(Generic[T]):
-
     JSON_TYPE_MAP: ClassVar[dict] = {
-        'string': lambda d: isinstance(d, str),
-        'integer': lambda d: isinstance(d, int),
-        'number': lambda d: isinstance(d, (float, int)),
-        'null': lambda d: d is None,
-        'boolean': lambda d: isinstance(d, bool),
+        "string": lambda d: isinstance(d, str),
+        "integer": lambda d: isinstance(d, int),
+        "number": lambda d: isinstance(d, (float, int)),
+        "null": lambda d: d is None,
+        "boolean": lambda d: isinstance(d, bool),
     }
 
     def __init__(self):
@@ -48,7 +48,6 @@ class ScalarDescriptor(Generic[T]):
 
 
 class CollectionDescriptor(Generic[T]):
-
     def __init__(self, *, default=None, metadata=dict):
         self._metadata = metadata
         self._default = default
@@ -63,18 +62,17 @@ class CollectionDescriptor(Generic[T]):
 
 
 __all__ = [
-    'ArrayDescriptor',
-    'BaseCollectionDescriptor',
-    'BooleanDescriptor',
-    'CollectionDescriptor',
-    'IntegerDescriptor',
-    'JSONSchemaFieldDescriptor',
-    'NullDescriptor',
-    'NumberDescriptor',
-    'ObjectDescriptor',
-    'ScalarDescriptor',
-    'SpecialKeywordDescriptor',
-    'StringDescriptor',
-    'process_keys',
+    "ArrayDescriptor",
+    "BaseCollectionDescriptor",
+    "BooleanDescriptor",
+    "CollectionDescriptor",
+    "IntegerDescriptor",
+    "JSONSchemaFieldDescriptor",
+    "NullDescriptor",
+    "NumberDescriptor",
+    "ObjectDescriptor",
+    "ScalarDescriptor",
+    "SpecialKeywordDescriptor",
+    "StringDescriptor",
+    "process_keys",
 ]
-
