@@ -12,7 +12,7 @@ from schemamodels import COMPARISONS, bases, exceptions, generate_functors
 
 
 def test_absent_is_not_none(Factory):
-    test = '''
+    test = """
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -29,7 +29,7 @@ def test_absent_is_not_none(Factory):
             }
         }
     }
-    '''
+    """
     t = json.loads(test)
     sm = Factory()
 
@@ -40,11 +40,11 @@ def test_absent_is_not_none(Factory):
         assert False
 
     result = AbsentSchema(provider_id=1)
-    assert result.brand_name == ''
+    assert result.brand_name == ""
 
 
 def test_enforce_required(required_fields_schema, Factory):
-    importlib.import_module('schemamodels.dynamic')
+    importlib.import_module("schemamodels.dynamic")
     sm = Factory()
     validators.Draft202012Validator.check_schema(required_fields_schema)
 
@@ -56,7 +56,7 @@ def test_enforce_required(required_fields_schema, Factory):
 
     req = RequiredSchema(brand_name="wally")
     assert req.brand_name is not None
-    assert req.brand_name != ''
+    assert req.brand_name != ""
 
     with pytest.raises(TypeError):
         RequiredSchema()
@@ -65,7 +65,7 @@ def test_enforce_required(required_fields_schema, Factory):
 
 
 def test_immutability(Factory):
-    test = '''
+    test = """
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -82,12 +82,13 @@ def test_immutability(Factory):
             }
         }
     }
-    '''
+    """
     t = json.loads(test)
     sm = Factory()
     sm.register(t)
 
     from schemamodels.dynamic import ImmutableSchema
+
     fs = ImmutableSchema(provider_id=1, brand_name="yo")
 
     with pytest.raises(FrozenInstanceError):
@@ -99,6 +100,7 @@ def test_default_support(default_value_schema, Factory):
     sm.register(default_value_schema)
 
     from schemamodels.dynamic import DefaultSchema
+
     fs = DefaultSchema(brand_name="yo")
 
     assert fs.provider_id == 5
@@ -106,7 +108,7 @@ def test_default_support(default_value_schema, Factory):
 
 @pytest.mark.range
 def test_numeric_range_support(Factory):
-    inclusive_range = '''
+    inclusive_range = """
     {
         "title": "inclusive-range",
         "description": "Blue Blah",
@@ -119,8 +121,8 @@ def test_numeric_range_support(Factory):
             }
         }
     }
-    '''
-    exclusive_max_range = '''
+    """
+    exclusive_max_range = """
     {
         "title": "exclusive-max-range",
         "description": "Blue Blah",
@@ -134,8 +136,8 @@ def test_numeric_range_support(Factory):
             }
         }
     }
-    '''
-    exclusive_min_range = '''
+    """
+    exclusive_min_range = """
     {
         "title": "exclusive-min-range",
         "description": "Blue Blah",
@@ -149,7 +151,7 @@ def test_numeric_range_support(Factory):
             }
         }
     }
-    '''
+    """
     irange = json.loads(inclusive_range)
     emaxrange = json.loads(exclusive_max_range)
     eminrange = json.loads(exclusive_min_range)
@@ -174,7 +176,7 @@ def test_numeric_range_support(Factory):
 
 @pytest.mark.multi
 def test_numeric_multiple_support(Factory):
-    multipleof = '''
+    multipleof = """
     {
         "title": "multiple-of",
         "description": "Blue Blah",
@@ -187,7 +189,7 @@ def test_numeric_multiple_support(Factory):
             }
         }
     }
-    '''
+    """
     multi = json.loads(multipleof)
     sm = Factory()
     sm.register(multi)
@@ -200,7 +202,7 @@ def test_numeric_multiple_support(Factory):
 
 @pytest.mark.string
 def test_string_maxlength_support(Factory):
-    maxlength = '''
+    maxlength = """
     {
         "title": "max-length",
         "description": "Blue Blah",
@@ -214,7 +216,7 @@ def test_string_maxlength_support(Factory):
             }
         }
     }
-    '''
+    """
     multi = json.loads(maxlength)
     sm = Factory()
     sm.register(multi)
@@ -222,7 +224,7 @@ def test_string_maxlength_support(Factory):
     from schemamodels.dynamic import MaxLength
 
     ml = MaxLength(brand_name="abcd")
-    assert ml.brand_name == 'abcd'
+    assert ml.brand_name == "abcd"
     with pytest.raises(exceptions.LengthConstraintViolation):
         MaxLength(brand_name="abcdefgh")
     with pytest.raises(exceptions.LengthConstraintViolation):
@@ -231,7 +233,7 @@ def test_string_maxlength_support(Factory):
 
 @pytest.mark.type
 def test_type_enforcement(Factory):
-    test = '''
+    test = """
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -249,12 +251,13 @@ def test_type_enforcement(Factory):
             }
         }
     }
-    '''
+    """
     t = json.loads(test)
     sm = Factory()
     sm.register(t)
 
     from schemamodels.dynamic import TypeSchema
+
     with pytest.raises(exceptions.ValueTypeViolation):
         TypeSchema(provider_id="a", brand_name="b")
 
@@ -264,7 +267,7 @@ def test_type_enforcement(Factory):
 
 @pytest.mark.custom
 def test_custom_malformed_errorhandler(Factory):
-    test = '''
+    test = """
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -282,7 +285,7 @@ def test_custom_malformed_errorhandler(Factory):
             }
         }
     }
-    '''
+    """
 
     class MyCustomErrorHandler(bases.BaseErrorHandler):
         pass
@@ -292,13 +295,13 @@ def test_custom_malformed_errorhandler(Factory):
     with pytest.raises(TypeError):
         Factory(error_handler=MyCustomErrorHandler)
 
-    lib = importlib.import_module('schemamodels.dynamic')
-    assert not hasattr(lib, 'FakeSchema')
+    lib = importlib.import_module("schemamodels.dynamic")
+    assert not hasattr(lib, "FakeSchema")
 
 
 @pytest.mark.custom
 def test_custom_malformed_renderer(Factory):
-    test = '''
+    test = """
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -316,7 +319,7 @@ def test_custom_malformed_renderer(Factory):
             }
         }
     }
-    '''
+    """
 
     class MyCustomRenderer(bases.BaseRenderer):
         pass
@@ -325,8 +328,8 @@ def test_custom_malformed_renderer(Factory):
     with pytest.raises(TypeError):
         Factory(renderer=MyCustomRenderer)
 
-    lib = importlib.import_module('schemamodels.dynamic')
-    assert not hasattr(lib, 'FakeSchema')
+    lib = importlib.import_module("schemamodels.dynamic")
+    assert not hasattr(lib, "FakeSchema")
 
 
 @pytest.mark.anyof
@@ -335,20 +338,22 @@ def test_anyof_support(Factory, anyof_schema):
     sm = Factory()
     sm.register(anyof_schema)
 
-    lib = importlib.import_module('schemamodels.dynamic')
+    lib = importlib.import_module("schemamodels.dynamic")
 
-    assert hasattr(lib, 'AnyOfSchema')
+    assert hasattr(lib, "AnyOfSchema")
 
     AnyOfSchema = lib.AnyOfSchema
     AnyOfSchema(provider_id=1.4, brand_name="a")
     AnyOfSchema(provider_id=4, brand_name="a")
-    with pytest.raises((exceptions.SubSchemaFailureViolation, exceptions.ValueTypeViolation)):
+    with pytest.raises(
+        (exceptions.SubSchemaFailureViolation, exceptions.ValueTypeViolation)
+    ):
         AnyOfSchema(provider_id="s", brand_name="a")
 
 
 @pytest.mark.allof
 def test_allof_support(Factory):
-    allof = '''
+    allof = """
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -369,15 +374,15 @@ def test_allof_support(Factory):
             }
         }
     }
-    '''
+    """
 
     t = json.loads(allof)
     sm = Factory()
     sm.register(t)
 
-    lib = importlib.import_module('schemamodels.dynamic')
+    lib = importlib.import_module("schemamodels.dynamic")
 
-    assert hasattr(lib, 'AllOfSchema')
+    assert hasattr(lib, "AllOfSchema")
 
     AllOfSchema = lib.AllOfSchema
     AllOfSchema(provider_id=1343, brand_name="abcd")
@@ -387,7 +392,7 @@ def test_allof_support(Factory):
 
 @pytest.mark.oneof
 def test_oneof_support(Factory):
-    oneof = '''
+    oneof = """
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -408,15 +413,15 @@ def test_oneof_support(Factory):
             }
         }
     }
-    '''
+    """
 
     t = json.loads(oneof)
     sm = Factory()
     sm.register(t)
 
-    lib = importlib.import_module('schemamodels.dynamic')
+    lib = importlib.import_module("schemamodels.dynamic")
 
-    assert hasattr(lib, 'OneOfSchema')
+    assert hasattr(lib, "OneOfSchema")
 
     OneOfSchema = lib.OneOfSchema
     OneOfSchema(provider_id=3, brand_name="abcd")
@@ -427,7 +432,7 @@ def test_oneof_support(Factory):
 
 @pytest.mark.not_
 def test_not_support(Factory):
-    _not = '''
+    _not = """
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -447,15 +452,15 @@ def test_not_support(Factory):
             }
         }
     }
-    '''
+    """
 
     t = json.loads(_not)
     sm = Factory()
     sm.register(t)
 
-    lib = importlib.import_module('schemamodels.dynamic')
+    lib = importlib.import_module("schemamodels.dynamic")
 
-    assert hasattr(lib, 'NotSchema')
+    assert hasattr(lib, "NotSchema")
 
     NotSchema = lib.NotSchema
     NotSchema(provider_id=5, brand_name="abcd")
@@ -465,31 +470,31 @@ def test_not_support(Factory):
 
 @pytest.mark.cell
 def test_type_comparison():
-    schema = {'type': 'number', 'maximum': 5, 'value': 10}
-    assert COMPARISONS['type'](schema['type'])(schema['value'])
+    schema = {"type": "number", "maximum": 5, "value": 10}
+    assert COMPARISONS["type"](schema["type"])(schema["value"])
 
 
 @pytest.mark.cell
 def test_range_comparison():
-    over = {'type': 'number', 'maximum': 5, 'value': 10}
-    under = {'type': 'number', 'maximum': 5, 'value': 3}
-    assert not COMPARISONS['maximum'](over['maximum'])(over['value'])
-    assert COMPARISONS['maximum'](under['maximum'])(under['value'])
+    over = {"type": "number", "maximum": 5, "value": 10}
+    under = {"type": "number", "maximum": 5, "value": 3}
+    assert not COMPARISONS["maximum"](over["maximum"])(over["value"])
+    assert COMPARISONS["maximum"](under["maximum"])(under["value"])
 
 
 @pytest.mark.cell
 def test_range_minmax_comparison():
-    over = {'type': 'number', 'minimum': 0, 'maximum': 5, 'value': 10}
-    under = {'type': 'number', 'minimum': 0, 'maximum': 5, 'value': -3}
-    assert not COMPARISONS['maximum'](over['maximum'])(over['value'])
-    assert COMPARISONS['minimum'](over['minimum'])(over['value'])
-    assert not COMPARISONS['minimum'](under['minimum'])(under['value'])
-    assert COMPARISONS['maximum'](under['maximum'])(under['value'])
+    over = {"type": "number", "minimum": 0, "maximum": 5, "value": 10}
+    under = {"type": "number", "minimum": 0, "maximum": 5, "value": -3}
+    assert not COMPARISONS["maximum"](over["maximum"])(over["value"])
+    assert COMPARISONS["minimum"](over["minimum"])(over["value"])
+    assert not COMPARISONS["minimum"](under["minimum"])(under["value"])
+    assert COMPARISONS["maximum"](under["maximum"])(under["value"])
 
 
 @pytest.mark.cell
 def test_functor_generator(Factory):
-    anyof = '''
+    anyof = """
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -510,17 +515,17 @@ def test_functor_generator(Factory):
             }
         }
     }
-    '''
+    """
 
     t = json.loads(anyof)
     fn = None
-    anyof_collection = t['properties']['provider_id'].get('anyOf', [])
+    anyof_collection = t["properties"]["provider_id"].get("anyOf", [])
     funcs = (generate_functors(s) for s in anyof_collection)
-    real = lambda value: (f['type'](value) for f in funcs)
-    print({'anyOf': real})
-    fn = {'anyOf': real}
+    real = lambda value: (f["type"](value) for f in funcs)
+    print({"anyOf": real})
+    fn = {"anyOf": real}
 
-    generate_functors(t['properties']['provider_id'])
+    generate_functors(t["properties"]["provider_id"])
     assert next(iter(fn.values()))(1.0)
     assert next(iter(fn.values()))(1)
     assert any(list(next(iter(fn.values()))(1.0)))
@@ -529,7 +534,7 @@ def test_functor_generator(Factory):
 
 @pytest.mark.enum
 def test_enum_support(Factory):
-    enum = '''
+    enum = """
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -548,15 +553,15 @@ def test_enum_support(Factory):
             }
         }
     }
-    '''
+    """
 
     t = json.loads(enum)
     sm = Factory()
     sm.register(t)
 
-    lib = importlib.import_module('schemamodels.dynamic')
+    lib = importlib.import_module("schemamodels.dynamic")
 
-    assert hasattr(lib, 'EnumSchema')
+    assert hasattr(lib, "EnumSchema")
 
     EnumSchema = lib.EnumSchema
     EnumSchema(handiness="left", brand_name="abcd")
@@ -570,17 +575,17 @@ def test_export_funcs(enum_field_schema, Factory):
     sm = Factory()
     sm.register(enum_field_schema)
 
-    lib = importlib.import_module('schemamodels.dynamic')
+    lib = importlib.import_module("schemamodels.dynamic")
 
-    assert hasattr(lib, 'EnumSchema')
+    assert hasattr(lib, "EnumSchema")
 
     EnumSchema = lib.EnumSchema
     e = EnumSchema(handiness="left", brand_name="abcd")
-    assert e.tocsv(fields=['handiness', 'brand_name']) == "left,abcd"
+    assert e.tocsv(fields=["handiness", "brand_name"]) == "left,abcd"
     assert e.tocsv(header=True) == "handiness,brand_name\nleft,abcd"
     assert e.todict() == {"handiness": "left", "brand_name": "abcd"}
-    assert 'left' in e.tolist()
-    assert 'abcd' in e.tolist()
+    assert "left" in e.tolist()
+    assert "abcd" in e.tolist()
 
 
 @pytest.mark.object
@@ -591,10 +596,9 @@ def test_simple_object_support(simple_schema, Factory):
     print(fs, fs_w_d)
     sm.register(simple_schema)
 
+    lib = importlib.import_module("schemamodels.dynamic")
 
-    lib = importlib.import_module('schemamodels.dynamic')
-
-    assert hasattr(lib, 'SimpleSchema')
+    assert hasattr(lib, "SimpleSchema")
 
     SimpleSchema = lib.SimpleSchema
     SimpleSchema(provider_id=4, brand_name="abcd")

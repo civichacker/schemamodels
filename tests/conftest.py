@@ -10,7 +10,7 @@ from schemamodels import SchemaModelFactory, SchemaModelFactoryV2
 
 @pytest.fixture(scope="session", autouse=True)
 def simple_schema():
-    test = '''
+    test = """
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -27,13 +27,13 @@ def simple_schema():
             }
         }
     }
-    '''
+    """
     yield json.loads(test)
 
 
 @pytest.fixture(scope="session", autouse=True)
 def malformed_schema():
-    test = '''
+    test = """
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -41,13 +41,13 @@ def malformed_schema():
         "title": "malformed-object",
         "type": "object"
     }
-    '''
+    """
     yield json.loads(test)
 
 
 @pytest.fixture(scope="session", autouse=True)
 def required_fields_schema():
-    test = '''
+    test = """
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -65,14 +65,14 @@ def required_fields_schema():
         },
         "required": ["brand_name"]
     }
-    '''
+    """
 
     yield json.loads(test)
 
 
 @pytest.fixture(scope="session", autouse=True)
 def default_value_schema():
-    test = '''
+    test = """
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -90,13 +90,13 @@ def default_value_schema():
             }
         }
     }
-    '''
+    """
     yield json.loads(test)
 
 
 @pytest.fixture(scope="session", autouse=True)
 def enum_field_schema():
-    enum = '''
+    enum = """
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -115,13 +115,13 @@ def enum_field_schema():
             }
         }
     }
-    '''
+    """
     yield json.loads(enum)
 
 
 @pytest.fixture(scope="session", autouse=True)
 def anyof_schema():
-    yield json.loads('''
+    yield json.loads("""
     {
         "$id": "https://schema.dev/fake-schema.schema.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -142,9 +142,11 @@ def anyof_schema():
             }
         }
     }
-    ''')
+    """)
 
 
-@pytest.fixture(scope="session", autouse=True, params=[SchemaModelFactory, SchemaModelFactoryV2])
+@pytest.fixture(
+    scope="session", autouse=True, params=[SchemaModelFactory, SchemaModelFactoryV2]
+)
 def Factory(request):
     yield request.param
