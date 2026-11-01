@@ -397,19 +397,21 @@ class SpecialKeywordDescriptor(JSONSchemaFieldDescriptor[A]):
         des.__set_name__(None, _name)
         try:
             des.__set__(_name, value)
-        except Exception:
+        except e.ValueTypeViolation:
             return False
         return True
 
     @contextmanager
     def dynamic_child_descriptors(self, obj, value):
-        try:
-            yield
-            if hasattr(obj, "__dict__"):
-                obj.__dict__[self._name] = value
-            self.__dict__[self._name] = value
-        except Exception:
-            raise
+        """
+
+        Raises:
+            ValueTypeViolation
+        """
+        yield
+        if hasattr(obj, "__dict__"):
+            obj.__dict__[self._name] = value
+        self.__dict__[self._name] = value
 
 
 class CoreModel(dict):
@@ -451,14 +453,3 @@ class CoreModel(dict):
     @property
     def name(self):
         return next(iter(self.keys()))
-
-    def map(self, operand):
-        return TypeNode()
-
-    def check(self, operand: dict):
-        if self.name in self.keys() and JSON_TYPE_MAP.get(self.type)(
-            operand.get(self.name)
-        ):
-            return CoreModel(self)
-        else:
-            raise Exception()

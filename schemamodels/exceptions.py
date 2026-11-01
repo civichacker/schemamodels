@@ -28,3 +28,7 @@ class ValueTypeViolation(SchemaViolation):
 
 class SubSchemaFailureViolation(SchemaViolation):
     pass
+
+
+class GenericDescriptorViolation(SchemaViolation):
+    pass
