@@ -136,27 +136,25 @@ class JSONSchemaFieldDescriptor(Protocol[A]):
                         raise e.ValueTypeViolation(f"failed field constraints: {bound}")
 
         if isinstance(self._metadata, dict):
-            if "anyOf" in self._metadata:
-                if not any(
-                    validate_subschema(s, value) for s in self._metadata["anyOf"]
-                ):
-                    raise e.SubSchemaFailureViolation("all of the subschemas failed")
+            if "anyOf" in self._metadata and not any(
+                validate_subschema(s, value) for s in self._metadata["anyOf"]
+            ):
+                raise e.SubSchemaFailureViolation("all of the subschemas failed")
             if "allOf" in self._metadata and not all(
                     validate_subschema(s, value) for s in self._metadata["allOf"]
                 ):
                 raise e.SubSchemaFailureViolation("at least one subschema failed")
-            if "oneOf" in self._metadata:
-                if (
-                    sum(
-                        1
-                        for s in self._metadata["oneOf"]
-                        if validate_subschema(s, value)
-                    )
-                    != 1
-                ):
-                    raise e.SubSchemaFailureViolation(
-                        "none or multiple of the subschemas failed"
-                    )
+            if "oneOf" in self._metadata and (
+                sum(
+                    1
+                    for s in self._metadata["oneOf"]
+                    if validate_subschema(s, value)
+                )
+                != 1
+            ):
+                raise e.SubSchemaFailureViolation(
+                    "none or multiple of the subschemas failed"
+                )
             if "not" in self._metadata:
                 if validate_subschema(self._metadata["not"], value):
                     raise e.SubSchemaFailureViolation("subschema failed")
