@@ -4,12 +4,42 @@
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from contextlib import contextmanager
+from contextvars import ContextVar
 from functools import partial
 from operator import contains, ge, gt, le, lt, mod, not_
 from typing import Any, AnyStr, ClassVar, Protocol, TypeVar, get_args
 
 from schemamodels import exceptions as e
 from schemamodels.constants import JSON_TYPE_MAP
+
+
+class ValidationCollector:
+    def __init__(self) -> None:
+        self.errors: list[e.SchemaViolation] = []
+        self._token = None
+
+    def __enter__(self) -> "ValidationCollector":
+        self._token = _CURRENT_VALIDATION_COLLECTOR.set(self)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        if self._token is not None:
+            _CURRENT_VALIDATION_COLLECTOR.reset(self._token)
+
+    def add_error(self, exc: e.SchemaViolation) -> None:
+        self.errors.append(exc)
+
+    def raise_if_errors(self) -> None:
+        if not self.errors:
+            return
+        if len(self.errors) == 1:
+            raise self.errors[0]
+        raise ExceptionGroup("Validation errors", self.errors)
+
+
+_CURRENT_VALIDATION_COLLECTOR: ContextVar[ValidationCollector | None] = ContextVar(
+    "_CURRENT_VALIDATION_COLLECTOR", default=None
+)
 
 
 class BaseErrorHandler(ABC):
@@ -119,45 +149,59 @@ class JSONSchemaFieldDescriptor(Protocol[A]):
         return self.__dict__.get(self._name, self._default)
 
     def __set__(self, obj, value):
-        if hasattr(self, "__orig_bases__") and self.__orig_bases__:
-            args = get_args(self.__orig_bases__[0])
-            if args:
-                ttype = args[0]
-                constraints = getattr(ttype, "__constraints__", None)
-                if constraints:
-                    if not isinstance(value, constraints):
-                        raise e.ValueTypeViolation(
-                            f"failed field constraints: {constraints}"
-                        )
-                else:
-                    bound = getattr(ttype, "__bound__", None)
-                    if bound and not isinstance(value, bound):
-                        raise e.ValueTypeViolation(f"failed field constraints: {bound}")
+        collector = _CURRENT_VALIDATION_COLLECTOR.get()
+        try:
+            if hasattr(self, "__orig_bases__") and self.__orig_bases__:
+                args = get_args(self.__orig_bases__[0])
+                if args:
+                    ttype = args[0]
+                    constraints = getattr(ttype, "__constraints__", None)
+                    if constraints:
+                        if not isinstance(value, constraints):
+                            raise e.ValueTypeViolation(
+                                f"failed field constraints: {constraints}"
+                            )
+                    else:
+                        bound = getattr(ttype, "__bound__", None)
+                        if bound and not isinstance(value, bound):
+                            raise e.ValueTypeViolation(f"failed field constraints: {bound}")
 
-        if isinstance(self._metadata, dict):
-            if "anyOf" in self._metadata and not any(
-                validate_subschema(s, value) for s in self._metadata["anyOf"]
-            ):
-                raise e.SubSchemaFailureViolation("all of the subschemas failed")
-            if "allOf" in self._metadata and not all(
-                validate_subschema(s, value) for s in self._metadata["allOf"]
-            ):
-                raise e.SubSchemaFailureViolation("at least one subschema failed")
-            if "oneOf" in self._metadata and (
-                sum(1 for s in self._metadata["oneOf"] if validate_subschema(s, value))
-                != 1
-            ):
-                raise e.SubSchemaFailureViolation(
-                    "none or multiple of the subschemas failed"
-                )
-            if "not" in self._metadata and validate_subschema(
-                self._metadata["not"], value
-            ):
-                raise e.SubSchemaFailureViolation("subschema failed")
-            if "enum" in self._metadata and value not in self._metadata["enum"]:
-                raise e.ValueTypeViolation(
-                    f"{self._name}={value} =/= enum={self._metadata['enum']} constraint fails"
-                )
+            if isinstance(self._metadata, dict):
+                if "anyOf" in self._metadata and not any(
+                    validate_subschema(s, value) for s in self._metadata["anyOf"]
+                ):
+                    raise e.SubSchemaFailureViolation("all of the subschemas failed")
+                if "allOf" in self._metadata and not all(
+                    validate_subschema(s, value) for s in self._metadata["allOf"]
+                ):
+                    raise e.SubSchemaFailureViolation("at least one subschema failed")
+                if "oneOf" in self._metadata and (
+                    sum(1 for s in self._metadata["oneOf"] if validate_subschema(s, value))
+                    != 1
+                ):
+                    raise e.SubSchemaFailureViolation(
+                        "none or multiple of the subschemas failed"
+                    )
+                if "not" in self._metadata and validate_subschema(
+                    self._metadata["not"], value
+                ):
+                    raise e.SubSchemaFailureViolation("subschema failed")
+                if "enum" in self._metadata and value not in self._metadata["enum"]:
+                    raise e.ValueTypeViolation(
+                        f"{self._name}={value} =/= enum={self._metadata['enum']} constraint fails"
+                    )
+        except e.SchemaViolation as exc:
+            if collector is not None:
+                collector.add_error(exc)
+                if hasattr(obj, "__dict__"):
+                    obj.__dict__[self._name] = value
+                self.__dict__[self._name] = value
+                return
+            raise
+
+        if hasattr(obj, "__dict__"):
+            obj.__dict__[self._name] = value
+        self.__dict__[self._name] = value
 
 
 class ArrayDescriptor(JSONSchemaFieldDescriptor[C]):
@@ -165,9 +209,20 @@ class ArrayDescriptor(JSONSchemaFieldDescriptor[C]):
         super().__init__(default=default, metadata=metadata or {})
 
     def __set__(self, obj, value):
-        if not isinstance(value, (list, tuple)):
-            raise e.ValueTypeViolation("expected array")
-        super().__set__(obj, value)
+        collector = _CURRENT_VALIDATION_COLLECTOR.get()
+        try:
+            if not isinstance(value, (list, tuple)):
+                raise e.ValueTypeViolation("expected array")
+            super().__set__(obj, value)
+        except e.SchemaViolation as exc:
+            if collector is not None:
+                collector.add_error(exc)
+                if hasattr(obj, "__dict__"):
+                    obj.__dict__[self._name] = value
+                self.__dict__[self._name] = value
+                return
+            raise
+
         if hasattr(obj, "__dict__"):
             obj.__dict__[self._name] = value
         self.__dict__[self._name] = value
@@ -178,9 +233,20 @@ class BooleanDescriptor(JSONSchemaFieldDescriptor[B]):
         super().__init__(default=default, metadata=metadata or {})
 
     def __set__(self, obj, value):
-        if not isinstance(value, bool):
-            raise e.ValueTypeViolation("expected boolean")
-        super().__set__(obj, value)
+        collector = _CURRENT_VALIDATION_COLLECTOR.get()
+        try:
+            if not isinstance(value, bool):
+                raise e.ValueTypeViolation("expected boolean")
+            super().__set__(obj, value)
+        except e.SchemaViolation as exc:
+            if collector is not None:
+                collector.add_error(exc)
+                if hasattr(obj, "__dict__"):
+                    obj.__dict__[self._name] = value
+                self.__dict__[self._name] = value
+                return
+            raise
+
         if hasattr(obj, "__dict__"):
             obj.__dict__[self._name] = value
         self.__dict__[self._name] = value
@@ -191,9 +257,20 @@ class ObjectDescriptor(JSONSchemaFieldDescriptor[O]):
         super().__init__(default=default, metadata=metadata or {})
 
     def __set__(self, obj, value):
-        if not isinstance(value, dict):
-            raise e.ValueTypeViolation("expected object")
-        super().__set__(obj, value)
+        collector = _CURRENT_VALIDATION_COLLECTOR.get()
+        try:
+            if not isinstance(value, dict):
+                raise e.ValueTypeViolation("expected object")
+            super().__set__(obj, value)
+        except e.SchemaViolation as exc:
+            if collector is not None:
+                collector.add_error(exc)
+                if hasattr(obj, "__dict__"):
+                    obj.__dict__[self._name] = value
+                self.__dict__[self._name] = value
+                return
+            raise
+
         if hasattr(obj, "__dict__"):
             obj.__dict__[self._name] = value
         self.__dict__[self._name] = value
@@ -204,9 +281,20 @@ class NullDescriptor(JSONSchemaFieldDescriptor[S]):
         super().__init__(default=default, metadata=metadata or {})
 
     def __set__(self, obj, value):
-        if value is not None:
-            raise e.ValueTypeViolation("expected null")
-        super().__set__(obj, value)
+        collector = _CURRENT_VALIDATION_COLLECTOR.get()
+        try:
+            if value is not None:
+                raise e.ValueTypeViolation("expected null")
+            super().__set__(obj, value)
+        except e.SchemaViolation as exc:
+            if collector is not None:
+                collector.add_error(exc)
+                if hasattr(obj, "__dict__"):
+                    obj.__dict__[self._name] = value
+                self.__dict__[self._name] = value
+                return
+            raise
+
         if hasattr(obj, "__dict__"):
             obj.__dict__[self._name] = value
         self.__dict__[self._name] = value
@@ -228,18 +316,28 @@ class CollectionDescriptor(JSONSchemaFieldDescriptor[C]):
         super().__init__(default=default, metadata=metadata or {})
 
     def __set__(self, obj, value):
-        if not isinstance(value, (list, tuple, set)):
-            raise e.ValueTypeViolation("expected collection")
-        super().__set__(obj, value)
+        collector = _CURRENT_VALIDATION_COLLECTOR.get()
+        try:
+            if not isinstance(value, (list, tuple, set)):
+                raise e.ValueTypeViolation("expected collection")
+            super().__set__(obj, value)
 
-        for metakey, metaval in self._metadata.items():
-            key = self.COMPARISONS.get(metakey, None)
-            if not key:
-                continue
-            if not key.get("comparator")(metaval)(value):
-                raise key.get("errorClass")(
-                    f"{self._name}={value} =/= {metakey}={metaval} constraint fails"
-                )
+            for metakey, metaval in self._metadata.items():
+                key = self.COMPARISONS.get(metakey, None)
+                if not key:
+                    continue
+                if not key.get("comparator")(metaval)(value):
+                    raise key.get("errorClass")(
+                        f"{self._name}={value} =/= {metakey}={metaval} constraint fails"
+                    )
+        except e.SchemaViolation as exc:
+            if collector is not None:
+                collector.add_error(exc)
+                if hasattr(obj, "__dict__"):
+                    obj.__dict__[self._name] = value
+                self.__dict__[self._name] = value
+                return
+            raise
 
         if hasattr(obj, "__dict__"):
             obj.__dict__[self._name] = value
@@ -262,18 +360,28 @@ class StringDescriptor(JSONSchemaFieldDescriptor[AnyStr]):
         super().__init__(default=default, metadata=metadata or {})
 
     def __set__(self, obj, value):
-        if not isinstance(value, (str, bytes)):
-            raise e.ValueTypeViolation("expected string")
-        super().__set__(obj, value)
+        collector = _CURRENT_VALIDATION_COLLECTOR.get()
+        try:
+            if not isinstance(value, (str, bytes)):
+                raise e.ValueTypeViolation("expected string")
+            super().__set__(obj, value)
 
-        for metakey, metaval in self._metadata.items():
-            key = self.COMPARISONS.get(metakey, None)
-            if not key:
-                continue
-            if not key.get("comparator")(metaval)(value):
-                raise key.get("errorClass")(
-                    f"{self._name}={value} =/= {metakey}={metaval} constraint fails"
-                )
+            for metakey, metaval in self._metadata.items():
+                key = self.COMPARISONS.get(metakey, None)
+                if not key:
+                    continue
+                if not key.get("comparator")(metaval)(value):
+                    raise key.get("errorClass")(
+                        f"{self._name}={value} =/= {metakey}={metaval} constraint fails"
+                    )
+        except e.SchemaViolation as exc:
+            if collector is not None:
+                collector.add_error(exc)
+                if hasattr(obj, "__dict__"):
+                    obj.__dict__[self._name] = value
+                self.__dict__[self._name] = value
+                return
+            raise
 
         if hasattr(obj, "__dict__"):
             obj.__dict__[self._name] = value
@@ -308,18 +416,28 @@ class IntegerDescriptor(JSONSchemaFieldDescriptor[int]):
         super().__init__(default=default, metadata=metadata or {})
 
     def __set__(self, obj, value):
-        if isinstance(value, bool) or not isinstance(value, int):
-            raise e.ValueTypeViolation("expected integer")
-        super().__set__(obj, value)
+        collector = _CURRENT_VALIDATION_COLLECTOR.get()
+        try:
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise e.ValueTypeViolation("expected integer")
+            super().__set__(obj, value)
 
-        for metakey, metaval in self._metadata.items():
-            key = self.COMPARISONS.get(metakey, None)
-            if not key:
-                continue
-            if not key.get("comparator")(metaval)(value):
-                raise key.get("errorClass")(
-                    f"{self._name}={value} =/= {metakey}={metaval} constraint fails"
-                )
+            for metakey, metaval in self._metadata.items():
+                key = self.COMPARISONS.get(metakey, None)
+                if not key:
+                    continue
+                if not key.get("comparator")(metaval)(value):
+                    raise key.get("errorClass")(
+                        f"{self._name}={value} =/= {metakey}={metaval} constraint fails"
+                    )
+        except e.SchemaViolation as exc:
+            if collector is not None:
+                collector.add_error(exc)
+                if hasattr(obj, "__dict__"):
+                    obj.__dict__[self._name] = value
+                self.__dict__[self._name] = value
+                return
+            raise
 
         if hasattr(obj, "__dict__"):
             obj.__dict__[self._name] = value
@@ -354,18 +472,28 @@ class NumberDescriptor(JSONSchemaFieldDescriptor[N]):
         super().__init__(default=default, metadata=metadata or {})
 
     def __set__(self, obj, value):
-        if isinstance(value, bool) or not isinstance(value, (int, float)):
-            raise e.ValueTypeViolation("expected number")
-        super().__set__(obj, value)
+        collector = _CURRENT_VALIDATION_COLLECTOR.get()
+        try:
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise e.ValueTypeViolation("expected number")
+            super().__set__(obj, value)
 
-        for metakey, metaval in self._metadata.items():
-            key = self.COMPARISONS.get(metakey, None)
-            if not key:
-                continue
-            if not key.get("comparator")(metaval)(value):
-                raise key.get("errorClass")(
-                    f"{self._name}={value} =/= {metakey}={metaval} constraint fails"
-                )
+            for metakey, metaval in self._metadata.items():
+                key = self.COMPARISONS.get(metakey, None)
+                if not key:
+                    continue
+                if not key.get("comparator")(metaval)(value):
+                    raise key.get("errorClass")(
+                        f"{self._name}={value} =/= {metakey}={metaval} constraint fails"
+                    )
+        except e.SchemaViolation as exc:
+            if collector is not None:
+                collector.add_error(exc)
+                if hasattr(obj, "__dict__"):
+                    obj.__dict__[self._name] = value
+                self.__dict__[self._name] = value
+                return
+            raise
 
         if hasattr(obj, "__dict__"):
             obj.__dict__[self._name] = value
@@ -394,10 +522,13 @@ class SpecialKeywordDescriptor(JSONSchemaFieldDescriptor[A]):
             return True
         des = descriptor_cls()
         des.__set_name__(None, _name)
+        token = _CURRENT_VALIDATION_COLLECTOR.set(None)
         try:
             des.__set__(_name, value)
         except e.ValueTypeViolation:
             return False
+        finally:
+            _CURRENT_VALIDATION_COLLECTOR.reset(token)
         return True
 
     @contextmanager
