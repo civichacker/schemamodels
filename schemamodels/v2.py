@@ -2,10 +2,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 from typing import TypeVar
 
-from schemamodels import exceptions as e
 from schemamodels.bases import (
     ArrayDescriptor,
     BooleanDescriptor,
+    CollectionDescriptor,
     IntegerDescriptor,
     JSONSchemaFieldDescriptor,
     NullDescriptor,
@@ -13,7 +13,6 @@ from schemamodels.bases import (
     ObjectDescriptor,
     SpecialKeywordDescriptor,
     StringDescriptor,
-    CollectionDescriptor,
 )
 
 T = TypeVar("T", bound=str)
