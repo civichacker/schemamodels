@@ -66,6 +66,17 @@ with pytest.raises(exceptions.ValueTypeViolation):
 
 ```
 
+### Required Fields Behavior
+
+> **Design Decision Note**:
+> In standard JSON Schema specifications, object properties are optional by default unless explicitly listed in the `required` array (see [Understanding JSON Schema: required](https://json-schema.org/understanding-json-schema/reference/object#required)).
+>
+> In `schemamodels`, **a missing `required` keyword means that all fields are required**. When registering an object schema without a `required` keyword, all defined properties without explicit `default` values become required fields.
+>
+> To make fields optional, either:
+> - Explicitly define the `required` keyword with only the mandatory properties (e.g., `"required": ["property_a"]` or `"required": []` to make all fields optional).
+> - Specify an explicit `"default"` value on the property definition.
+
 ## Why this library exists
 
 ### Faster than defining dataclasses manually
