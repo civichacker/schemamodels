@@ -8,6 +8,7 @@ import pytest
 
 from schemamodels import SchemaModelFactoryV2, bases, v2
 from schemamodels import exceptions as e
+from schemamodels.constants import REQUIRED_MISSING
 
 T = TypeVar("T", str, int, float, bool, None)
 C = TypeVar("C", list, tuple)
@@ -561,3 +562,196 @@ def test_schema_model_factory_v2_multiple_errors():
     # Validation failure on required string length
     with pytest.RaisesGroup(e.LengthConstraintViolation, e.RangeConstraintViolation):
         ComprehensiveVtwoUserSchema(username="jo", age=16, balance=100.0)
+
+
+@pytest.mark.v2
+@pytest.mark.descriptor
+def test_json_schema_field_descriptor():
+    class TestClass:
+        field = v2.JSONSchemaFieldDescriptor(
+            default="init_val",
+            metadata={
+                "enum": ["init_val", "other_val"],
+                "anyOf": [{"type": "string"}],
+            },
+        )
+
+    # Class-level access returns default
+    assert TestClass.field == "init_val"
+
+    inst = TestClass()
+    # Instance-level access before assignment returns default
+    assert inst.field == "init_val"
+
+    # Valid assignment
+    inst.field = "other_val"
+    assert inst.field == "other_val"
+
+    # Enum constraint failure
+    with pytest.raises(e.ValueTypeViolation):
+        inst.field = "invalid_enum_val"
+
+    # Subschema failure
+    class SubschemaTestClass:
+        sub_field = v2.JSONSchemaFieldDescriptor(
+            metadata={"allOf": [{"minLength": 5}]}
+        )
+
+    sub_inst = SubschemaTestClass()
+    with pytest.raises(e.SubSchemaFailureViolation):
+        sub_inst.sub_field = "abc"
+
+    # REQUIRED_MISSING failure
+    with pytest.raises(e.RequiredPropertyViolation):
+        inst.field = REQUIRED_MISSING
+
+
+@pytest.mark.v2
+@pytest.mark.descriptor
+def test_special_keyword_descriptor_dynamic_context():
+    class CustomSpecialDescriptor(v2.SpecialKeywordDescriptor[str]):
+        pass
+
+    class SpecialClass:
+        field = CustomSpecialDescriptor(default="initial")
+
+    obj = SpecialClass()
+    assert obj.field == "initial"
+
+    desc = SpecialClass.__dict__["field"]
+    with desc.dynamic_child_descriptors(obj, "updated_value"):
+        pass
+
+    assert obj.field == "updated_value"
+    assert desc.__get__(obj) == "updated_value"
+
+
+@pytest.mark.v2
+@pytest.mark.descriptor
+@pytest.mark.parametrize(
+    "descriptor_cls",
+    [
+        v2.JSONSchemaFieldDescriptor,
+        v2.StringDescriptor,
+        v2.IntegerDescriptor,
+        v2.NumberDescriptor,
+        v2.BooleanDescriptor,
+        v2.ArrayDescriptor,
+        v2.ObjectDescriptor,
+        v2.NullDescriptor,
+        v2.CollectionDescriptor,
+        v2.SpecialKeywordDescriptor,
+    ],
+)
+def test_all_descriptors_required_missing_handling(descriptor_cls):
+    class Container:
+        pass
+
+    desc = descriptor_cls()
+    desc.__set_name__(Container, "field")
+    inst = Container()
+
+    with pytest.raises(e.RequiredPropertyViolation):
+        desc.__set__(inst, REQUIRED_MISSING)
+
+
+@pytest.mark.v2
+@pytest.mark.descriptor
+def test_standalone_descriptors_fail_fast():
+    class StandaloneObj:
+        pass
+
+    obj = StandaloneObj()
+
+    # StringDescriptor standalone
+    str_desc = v2.StringDescriptor(metadata={"minLength": 4})
+    str_desc.__set_name__(StandaloneObj, "s")
+    str_desc.__set__(obj, "valid")
+    assert obj.s == "valid"
+    with pytest.raises(e.LengthConstraintViolation):
+        str_desc.__set__(obj, "no")
+    with pytest.raises(e.ValueTypeViolation):
+        str_desc.__set__(obj, 123)
+
+    # IntegerDescriptor standalone
+    int_desc = v2.IntegerDescriptor(metadata={"minimum": 10})
+    int_desc.__set_name__(StandaloneObj, "i")
+    int_desc.__set__(obj, 15)
+    assert obj.i == 15
+    with pytest.raises(e.RangeConstraintViolation):
+        int_desc.__set__(obj, 5)
+    with pytest.raises(e.ValueTypeViolation):
+        int_desc.__set__(obj, 15.5)
+
+    # NumberDescriptor standalone
+    num_desc = v2.NumberDescriptor(metadata={"maximum": 50.0})
+    num_desc.__set_name__(StandaloneObj, "n")
+    num_desc.__set__(obj, 25.5)
+    assert obj.n == 25.5
+    with pytest.raises(e.RangeConstraintViolation):
+        num_desc.__set__(obj, 75.0)
+
+    # BooleanDescriptor standalone
+    bool_desc = v2.BooleanDescriptor()
+    bool_desc.__set_name__(StandaloneObj, "b")
+    bool_desc.__set__(obj, True)
+    assert obj.b is True
+    with pytest.raises(e.ValueTypeViolation):
+        bool_desc.__set__(obj, "true")
+
+    # ArrayDescriptor standalone
+    arr_desc = v2.ArrayDescriptor()
+    arr_desc.__set_name__(StandaloneObj, "a")
+    arr_desc.__set__(obj, [1, 2])
+    assert obj.a == [1, 2]
+    arr_desc.__set__(obj, (3, 4))
+    assert obj.a == (3, 4)
+    with pytest.raises(e.ValueTypeViolation):
+        arr_desc.__set__(obj, "1,2")
+
+    # ObjectDescriptor standalone
+    obj_desc = v2.ObjectDescriptor()
+    obj_desc.__set_name__(StandaloneObj, "o")
+    obj_desc.__set__(obj, {"key": "val"})
+    assert obj.o == {"key": "val"}
+    with pytest.raises(e.ValueTypeViolation):
+        obj_desc.__set__(obj, [1, 2])
+
+    # NullDescriptor standalone
+    null_desc = v2.NullDescriptor()
+    null_desc.__set_name__(StandaloneObj, "nl")
+    null_desc.__set__(obj, None)
+    assert obj.nl is None
+    with pytest.raises(e.ValueTypeViolation):
+        null_desc.__set__(obj, 0)
+
+    # CollectionDescriptor standalone
+    col_desc = v2.CollectionDescriptor(metadata={"maxLength": 2})
+    col_desc.__set_name__(StandaloneObj, "c")
+    col_desc.__set__(obj, (1, 2))
+    assert obj.c == (1, 2)
+    with pytest.raises(e.LengthConstraintViolation):
+        col_desc.__set__(obj, [1, 2, 3])
+
+
+@pytest.mark.v2
+@pytest.mark.descriptor
+def test_v2_exports_and_parity():
+    expected_descriptors = {
+        "ArrayDescriptor",
+        "BooleanDescriptor",
+        "CollectionDescriptor",
+        "IntegerDescriptor",
+        "JSONSchemaFieldDescriptor",
+        "NullDescriptor",
+        "NumberDescriptor",
+        "ObjectDescriptor",
+        "SpecialKeywordDescriptor",
+        "StringDescriptor",
+    }
+    assert expected_descriptors.issubset(set(v2.__all__))
+
+    for name in expected_descriptors:
+        v2_cls = getattr(v2, name)
+        bases_cls = getattr(bases, name)
+        assert v2_cls is bases_cls
