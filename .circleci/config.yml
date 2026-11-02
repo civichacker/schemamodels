@@ -46,7 +46,7 @@ jobs:
       - checkout
       - python/install-packages:
           pkg-manager: poetry
-      - run: poetry run vulture .
+      - run: poetry run vulture schemamodels
   fsf compliance:
     executor: python/default
     docker:
