@@ -27,7 +27,8 @@ def test_absent_is_not_none(Factory):
             "brand_name": {
               "type": "string"
             }
-        }
+        },
+        "required": ["provider_id"]
     }
     """
     t = json.loads(test)

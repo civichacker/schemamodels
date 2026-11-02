@@ -147,3 +147,43 @@ def test_required_keyword_runtime_enforcement(Factory):
     err_types = {type(err) for err in exc_info.value.exceptions}
     assert exceptions.RequiredPropertyViolation in err_types
     assert exceptions.LengthConstraintViolation in err_types
+
+
+@pytest.mark.struct
+def test_missing_required_keyword_means_all_fields_required(Factory):
+    sm = Factory()
+
+    schema = {
+        "title": "missing-required-kw-schema",
+        "type": "object",
+        "properties": {
+            "first_name": {"type": "string"},
+            "last_name": {"type": "string"},
+            "age": {"type": "integer"},
+            "role": {"type": "string", "default": "member"},
+        },
+    }
+    sm.register(schema)
+
+    from schemamodels.dynamic import MissingRequiredKwSchema
+
+    # 1. Valid instance with all non-default fields provided and role taking default
+    instance = MissingRequiredKwSchema(first_name="Ada", last_name="Lovelace", age=36)
+    assert instance.first_name == "Ada"
+    assert instance.last_name == "Lovelace"
+    assert instance.age == 36
+    assert instance.role == "member"
+
+    # 2. Missing one required field (since all fields without defaults are required when 'required' keyword is absent)
+    with pytest.raises(exceptions.RequiredPropertyViolation):
+        MissingRequiredKwSchema(first_name="Ada", last_name="Lovelace")  # missing age
+
+    with pytest.raises(exceptions.RequiredPropertyViolation):
+        MissingRequiredKwSchema(first_name="Ada", age=36)  # missing last_name
+
+    # 3. Missing multiple required fields raises ExceptionGroup
+    with pytest.raises(ExceptionGroup) as exc_info:
+        MissingRequiredKwSchema()
+    assert len(exc_info.value.exceptions) == 3
+    for err in exc_info.value.exceptions:
+        assert isinstance(err, exceptions.RequiredPropertyViolation)

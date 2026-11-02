@@ -181,11 +181,20 @@ class SchemaModelFactory:
     def process_object(
         self, schema: dict, required_fields: list | None = None
     ) -> tuple:
-        required_fields = (
-            list(required_fields)
-            if isinstance(required_fields, (list, tuple, set))
-            else []
-        )
+        if required_fields is None:
+            if "required" in schema:
+                req = schema["required"]
+                required_fields = (
+                    list(req) if isinstance(req, (list, tuple, set)) else []
+                )
+            else:
+                required_fields = list(schema.get("properties", {}).keys())
+        else:
+            required_fields = (
+                list(required_fields)
+                if isinstance(required_fields, (list, tuple, set))
+                else []
+            )
         fields = deque()
         fields_with_defaults = deque()
         for k, v in schema["properties"].items():
@@ -246,9 +255,11 @@ class SchemaModelFactory:
                 raise e.MalformedSchemaViolation(
                     "required keyword must be an array of unique strings"
                 )
+            required_fields = schema.get("required", [])
+        else:
+            required_fields = list(schema.get("properties", {}).keys())
 
         klassname = utils.generate_classname(schema.get("title"))
-        required_fields = schema.get("required", [])
 
         fields, fields_with_defaults = self.process_object(
             schema, required_fields=required_fields
@@ -338,11 +349,20 @@ class SchemaModelFactoryV2(SchemaModelFactory):
     def process_object(  # noqa: C901
         self, schema: dict, required_fields: list | None = None
     ) -> tuple:
-        required_fields = (
-            list(required_fields)
-            if isinstance(required_fields, (list, tuple, set))
-            else []
-        )
+        if required_fields is None:
+            if "required" in schema:
+                req = schema["required"]
+                required_fields = (
+                    list(req) if isinstance(req, (list, tuple, set)) else []
+                )
+            else:
+                required_fields = list(schema.get("properties", {}).keys())
+        else:
+            required_fields = (
+                list(required_fields)
+                if isinstance(required_fields, (list, tuple, set))
+                else []
+            )
 
         fields = deque()
         fields_with_defaults = deque()
@@ -506,9 +526,11 @@ class SchemaModelFactoryV2(SchemaModelFactory):
                 raise e.MalformedSchemaViolation(
                     "required keyword must be an array of unique strings"
                 )
+            required_fields = schema.get("required", [])
+        else:
+            required_fields = list(schema.get("properties", {}).keys())
 
         klassname = utils.generate_classname(schema.get("title"))
-        required_fields = schema.get("required", [])
 
         fields, fields_with_defaults = self.process_object(
             schema, required_fields=required_fields
