@@ -25,20 +25,6 @@ def process_keys(structure: dict):
     yield from set(structure.get("properties", {}).keys()) - {"$id", "$schema"}
 
 
-class ScalarDescriptor(Generic[T]):
-    def __init__(self):
-        self.__orig_class__ = None
-
-    def __set_name__(self, o, name):
-        self._name = "_" + name
-
-    def __set__(self, obj, value: T):
-        ttype = self.__orig_class__.__args__[0]
-        if not isinstance(value, ttype):
-            raise e.ValueTypeViolation()
-        setattr(obj, self._name, value)
-
-
 class CollectionDescriptor(Generic[T]):
     def __init__(self, *, default=None, metadata=dict):
         self._metadata = metadata
@@ -63,7 +49,6 @@ __all__ = [
     "NullDescriptor",
     "NumberDescriptor",
     "ObjectDescriptor",
-    "ScalarDescriptor",
     "SpecialKeywordDescriptor",
     "StringDescriptor",
     "process_keys",
