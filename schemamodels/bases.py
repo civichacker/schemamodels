@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from functools import partial
 from operator import contains, ge, gt, le, lt, mod, not_
-from typing import Any, AnyStr, ClassVar, Protocol, TypeVar, get_args
+from typing import Any, AnyStr, ClassVar, Protocol, Self, TypeVar, get_args
 
 from schemamodels import exceptions as e
 from schemamodels.constants import JSON_TYPE_MAP, REQUIRED_MISSING
@@ -18,7 +18,7 @@ class ValidationCollector:
         self.errors: list[e.SchemaViolation] = []
         self._token = None
 
-    def __enter__(self) -> "ValidationCollector":
+    def __enter__(self) -> Self:
         self._token = _CURRENT_VALIDATION_COLLECTOR.set(self)
         return self
 
@@ -172,13 +172,13 @@ class JSONSchemaFieldDescriptor(Protocol[A]):
 
     def __set__(self, obj, value):
         errors = (
-            obj.__dict__.get("_validation_errors")
-            if hasattr(obj, "__dict__")
-            else None
+            obj.__dict__.get("_validation_errors") if hasattr(obj, "__dict__") else None
         )
         try:
             if value is REQUIRED_MISSING:
-                raise e.RequiredPropertyViolation(f"{self._name} is a required property")
+                raise e.RequiredPropertyViolation(
+                    f"{self._name} is a required property"
+                )
             if hasattr(self, "__orig_bases__") and self.__orig_bases__:
                 args = get_args(self.__orig_bases__[0])
                 if args:
@@ -192,7 +192,9 @@ class JSONSchemaFieldDescriptor(Protocol[A]):
                     else:
                         bound = getattr(ttype, "__bound__", None)
                         if bound and not isinstance(value, bound):
-                            raise e.ValueTypeViolation(f"failed field constraints: {bound}")
+                            raise e.ValueTypeViolation(
+                                f"failed field constraints: {bound}"
+                            )
 
             if self._enum is not None and value not in self._enum:
                 raise e.ValueTypeViolation(
@@ -222,13 +224,13 @@ class ArrayDescriptor(JSONSchemaFieldDescriptor[C]):
 
     def __set__(self, obj, value):
         errors = (
-            obj.__dict__.get("_validation_errors")
-            if hasattr(obj, "__dict__")
-            else None
+            obj.__dict__.get("_validation_errors") if hasattr(obj, "__dict__") else None
         )
         try:
             if value is REQUIRED_MISSING:
-                raise e.RequiredPropertyViolation(f"{self._name} is a required property")
+                raise e.RequiredPropertyViolation(
+                    f"{self._name} is a required property"
+                )
             if not isinstance(value, (list, tuple)):
                 raise e.ValueTypeViolation("expected array")
             if self._enum is not None and value not in self._enum:
@@ -259,13 +261,13 @@ class BooleanDescriptor(JSONSchemaFieldDescriptor[B]):
 
     def __set__(self, obj, value):
         errors = (
-            obj.__dict__.get("_validation_errors")
-            if hasattr(obj, "__dict__")
-            else None
+            obj.__dict__.get("_validation_errors") if hasattr(obj, "__dict__") else None
         )
         try:
             if value is REQUIRED_MISSING:
-                raise e.RequiredPropertyViolation(f"{self._name} is a required property")
+                raise e.RequiredPropertyViolation(
+                    f"{self._name} is a required property"
+                )
             if type(value) is not bool and not isinstance(value, bool):
                 raise e.ValueTypeViolation("expected boolean")
             if self._enum is not None and value not in self._enum:
@@ -296,13 +298,13 @@ class ObjectDescriptor(JSONSchemaFieldDescriptor[O]):
 
     def __set__(self, obj, value):
         errors = (
-            obj.__dict__.get("_validation_errors")
-            if hasattr(obj, "__dict__")
-            else None
+            obj.__dict__.get("_validation_errors") if hasattr(obj, "__dict__") else None
         )
         try:
             if value is REQUIRED_MISSING:
-                raise e.RequiredPropertyViolation(f"{self._name} is a required property")
+                raise e.RequiredPropertyViolation(
+                    f"{self._name} is a required property"
+                )
             if not isinstance(value, dict):
                 raise e.ValueTypeViolation("expected object")
             if self._enum is not None and value not in self._enum:
@@ -333,13 +335,13 @@ class NullDescriptor(JSONSchemaFieldDescriptor[S]):
 
     def __set__(self, obj, value):
         errors = (
-            obj.__dict__.get("_validation_errors")
-            if hasattr(obj, "__dict__")
-            else None
+            obj.__dict__.get("_validation_errors") if hasattr(obj, "__dict__") else None
         )
         try:
             if value is REQUIRED_MISSING:
-                raise e.RequiredPropertyViolation(f"{self._name} is a required property")
+                raise e.RequiredPropertyViolation(
+                    f"{self._name} is a required property"
+                )
             if value is not None:
                 raise e.ValueTypeViolation("expected null")
             if self._enum is not None and value not in self._enum:
@@ -383,13 +385,13 @@ class CollectionDescriptor(JSONSchemaFieldDescriptor[C]):
 
     def __set__(self, obj, value):
         errors = (
-            obj.__dict__.get("_validation_errors")
-            if hasattr(obj, "__dict__")
-            else None
+            obj.__dict__.get("_validation_errors") if hasattr(obj, "__dict__") else None
         )
         try:
             if value is REQUIRED_MISSING:
-                raise e.RequiredPropertyViolation(f"{self._name} is a required property")
+                raise e.RequiredPropertyViolation(
+                    f"{self._name} is a required property"
+                )
             if not isinstance(value, (list, tuple, set)):
                 raise e.ValueTypeViolation("expected collection")
             if self._min_length is not None and len(value) < self._min_length:
@@ -441,13 +443,13 @@ class StringDescriptor(JSONSchemaFieldDescriptor[AnyStr]):
 
     def __set__(self, obj, value):
         errors = (
-            obj.__dict__.get("_validation_errors")
-            if hasattr(obj, "__dict__")
-            else None
+            obj.__dict__.get("_validation_errors") if hasattr(obj, "__dict__") else None
         )
         try:
             if value is REQUIRED_MISSING:
-                raise e.RequiredPropertyViolation(f"{self._name} is a required property")
+                raise e.RequiredPropertyViolation(
+                    f"{self._name} is a required property"
+                )
             if type(value) is not str and not isinstance(value, (str, bytes)):
                 raise e.ValueTypeViolation("expected string")
             if self._min_length is not None and len(value) < self._min_length:
@@ -514,13 +516,13 @@ class IntegerDescriptor(JSONSchemaFieldDescriptor[int]):
 
     def __set__(self, obj, value):
         errors = (
-            obj.__dict__.get("_validation_errors")
-            if hasattr(obj, "__dict__")
-            else None
+            obj.__dict__.get("_validation_errors") if hasattr(obj, "__dict__") else None
         )
         try:
             if value is REQUIRED_MISSING:
-                raise e.RequiredPropertyViolation(f"{self._name} is a required property")
+                raise e.RequiredPropertyViolation(
+                    f"{self._name} is a required property"
+                )
             if type(value) is bool or not isinstance(value, int):
                 raise e.ValueTypeViolation("expected integer")
             if self._minimum is not None and value < self._minimum:
@@ -531,17 +533,11 @@ class IntegerDescriptor(JSONSchemaFieldDescriptor[int]):
                 raise e.RangeConstraintViolation(
                     f"{self._name}={value} =/= maximum={self._maximum} constraint fails"
                 )
-            if (
-                self._exclusive_minimum is not None
-                and value <= self._exclusive_minimum
-            ):
+            if self._exclusive_minimum is not None and value <= self._exclusive_minimum:
                 raise e.RangeConstraintViolation(
                     f"{self._name}={value} =/= exclusiveMinimum={self._exclusive_minimum} constraint fails"
                 )
-            if (
-                self._exclusive_maximum is not None
-                and value >= self._exclusive_maximum
-            ):
+            if self._exclusive_maximum is not None and value >= self._exclusive_maximum:
                 raise e.RangeConstraintViolation(
                     f"{self._name}={value} =/= exclusiveMaximum={self._exclusive_maximum} constraint fails"
                 )
@@ -605,13 +601,13 @@ class NumberDescriptor(JSONSchemaFieldDescriptor[N]):
 
     def __set__(self, obj, value):
         errors = (
-            obj.__dict__.get("_validation_errors")
-            if hasattr(obj, "__dict__")
-            else None
+            obj.__dict__.get("_validation_errors") if hasattr(obj, "__dict__") else None
         )
         try:
             if value is REQUIRED_MISSING:
-                raise e.RequiredPropertyViolation(f"{self._name} is a required property")
+                raise e.RequiredPropertyViolation(
+                    f"{self._name} is a required property"
+                )
             if type(value) is bool or not isinstance(value, (int, float)):
                 raise e.ValueTypeViolation("expected number")
             if self._minimum is not None and value < self._minimum:
@@ -622,17 +618,11 @@ class NumberDescriptor(JSONSchemaFieldDescriptor[N]):
                 raise e.RangeConstraintViolation(
                     f"{self._name}={value} =/= maximum={self._maximum} constraint fails"
                 )
-            if (
-                self._exclusive_minimum is not None
-                and value <= self._exclusive_minimum
-            ):
+            if self._exclusive_minimum is not None and value <= self._exclusive_minimum:
                 raise e.RangeConstraintViolation(
                     f"{self._name}={value} =/= exclusiveMinimum={self._exclusive_minimum} constraint fails"
                 )
-            if (
-                self._exclusive_maximum is not None
-                and value >= self._exclusive_maximum
-            ):
+            if self._exclusive_maximum is not None and value >= self._exclusive_maximum:
                 raise e.RangeConstraintViolation(
                     f"{self._name}={value} =/= exclusiveMaximum={self._exclusive_maximum} constraint fails"
                 )
