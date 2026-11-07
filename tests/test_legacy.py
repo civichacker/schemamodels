@@ -27,7 +27,8 @@ def test_absent_is_not_none(Factory):
             "brand_name": {
               "type": "string"
             }
-        }
+        },
+        "required": ["provider_id"]
     }
     """
     t = json.loads(test)
@@ -37,7 +38,7 @@ def test_absent_is_not_none(Factory):
         assert sm.register(t)
 
         from schemamodels.dynamic import AbsentSchema
-    except exceptions.RequiredPropertyViolation:
+    except (ImportError, exceptions.MalformedSchemaViolation):
         assert False
 
     result = AbsentSchema(provider_id=1)
@@ -79,9 +80,9 @@ def test_enforce_required(Factory):
     assert req.brand_name is not None
     assert req.brand_name != ""
 
-    with pytest.raises(TypeError):
+    with pytest.raises(exceptions.RequiredPropertyViolation):
         RequiredSchema()
-    with pytest.raises(TypeError):
+    with pytest.raises(exceptions.RequiredPropertyViolation):
         RequiredSchema(provider_id=1)
 
 

@@ -1,11 +1,11 @@
 # SPDX-FileCopyrightText: 2023-2026 Civic Hacker LLC
 # SPDX-License-Identifier: GPL-3.0-or-later
-from typing import Generic, TypeVar
+from typing import TypeVar
 
-from schemamodels import exceptions as e
 from schemamodels.bases import (
     ArrayDescriptor,
     BooleanDescriptor,
+    CollectionDescriptor,
     IntegerDescriptor,
     JSONSchemaFieldDescriptor,
     NullDescriptor,
@@ -13,9 +13,6 @@ from schemamodels.bases import (
     ObjectDescriptor,
     SpecialKeywordDescriptor,
     StringDescriptor,
-)
-from schemamodels.bases import (
-    CollectionDescriptor as BaseCollectionDescriptor,
 )
 
 T = TypeVar("T", bound=str)
@@ -25,37 +22,8 @@ def process_keys(structure: dict):
     yield from set(structure.get("properties", {}).keys()) - {"$id", "$schema"}
 
 
-class ScalarDescriptor(Generic[T]):
-    def __init__(self):
-        self.__orig_class__ = None
-
-    def __set_name__(self, o, name):
-        self._name = "_" + name
-
-    def __set__(self, obj, value: T):
-        ttype = self.__orig_class__.__args__[0]
-        if not isinstance(value, ttype):
-            raise e.ValueTypeViolation()
-        setattr(obj, self._name, value)
-
-
-class CollectionDescriptor(Generic[T]):
-    def __init__(self, *, default=None, metadata=dict):
-        self._metadata = metadata
-        self._default = default
-
-    def __set_name__(self, o, name):
-        self._name = "_" + name
-
-    def __set__(self, obj, value: T):
-        if not isinstance(value, list):
-            raise e.ValueTypeViolation()
-        setattr(obj, self._name, value)
-
-
 __all__ = [
     "ArrayDescriptor",
-    "BaseCollectionDescriptor",
     "BooleanDescriptor",
     "CollectionDescriptor",
     "IntegerDescriptor",
@@ -63,7 +31,6 @@ __all__ = [
     "NullDescriptor",
     "NumberDescriptor",
     "ObjectDescriptor",
-    "ScalarDescriptor",
     "SpecialKeywordDescriptor",
     "StringDescriptor",
     "process_keys",

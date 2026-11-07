@@ -4,6 +4,8 @@
 from functools import partial
 from operator import contains, ge, gt, le, lt, mod, not_
 
+REQUIRED_MISSING = object()
+
 DEFAULT_FACTORIES = {
     "string": str,
     "integer": int,
@@ -37,18 +39,6 @@ PORCELINE_KEYWORDS = [
     "description",
 ]
 
-
-COLLECTIONS = {
-    "anyOf": lambda d: partial(
-        lambda struct: __import__("schemamodels").generate_functors(struct), d
-    ),
-    "allOf": lambda d: partial(
-        lambda struct: __import__("schemamodels").generate_functors(struct), d
-    ),
-    "oneOf": lambda d: partial(
-        lambda struct: __import__("schemamodels").generate_functors(struct), d
-    ),
-}
 
 COMPARISONS = {
     "type": lambda d: JSON_TYPE_MAP[d],
