@@ -232,7 +232,7 @@ class ArrayDescriptor(JSONSchemaFieldDescriptor[C]):
                     f"{self._name} is a required property"
                 )
             if not isinstance(value, (list, tuple)):
-                raise e.ValueTypeViolation("expected array")
+                raise e.ValueTypeViolation(f"{self._name}={value} expected array")
             if self._enum is not None and value not in self._enum:
                 raise e.ValueTypeViolation(
                     f"{self._name}={value} =/= enum={self._raw_enum} constraint fails"
@@ -269,7 +269,7 @@ class BooleanDescriptor(JSONSchemaFieldDescriptor[B]):
                     f"{self._name} is a required property"
                 )
             if type(value) is not bool and not isinstance(value, bool):
-                raise e.ValueTypeViolation("expected boolean")
+                raise e.ValueTypeViolation(f"{self._name}={value} expected boolean")
             if self._enum is not None and value not in self._enum:
                 raise e.ValueTypeViolation(
                     f"{self._name}={value} =/= enum={self._raw_enum} constraint fails"
@@ -306,7 +306,7 @@ class ObjectDescriptor(JSONSchemaFieldDescriptor[O]):
                     f"{self._name} is a required property"
                 )
             if not isinstance(value, dict):
-                raise e.ValueTypeViolation("expected object")
+                raise e.ValueTypeViolation(f"{self._name} expected object")
             if self._enum is not None and value not in self._enum:
                 raise e.ValueTypeViolation(
                     f"{self._name}={value} =/= enum={self._raw_enum} constraint fails"
@@ -343,7 +343,7 @@ class NullDescriptor(JSONSchemaFieldDescriptor[S]):
                     f"{self._name} is a required property"
                 )
             if value is not None:
-                raise e.ValueTypeViolation("expected null")
+                raise e.ValueTypeViolation(f"{self._name}={value} expected null")
             if self._enum is not None and value not in self._enum:
                 raise e.ValueTypeViolation(
                     f"{self._name}={value} =/= enum={self._raw_enum} constraint fails"
@@ -393,7 +393,7 @@ class CollectionDescriptor(JSONSchemaFieldDescriptor[C]):
                     f"{self._name} is a required property"
                 )
             if not isinstance(value, (list, tuple, set)):
-                raise e.ValueTypeViolation("expected collection")
+                raise e.ValueTypeViolation(f"{self._name} expected collection")
             if self._min_length is not None and len(value) < self._min_length:
                 raise e.LengthConstraintViolation(
                     f"{self._name}={value} =/= minLength={self._min_length} constraint fails"
@@ -451,7 +451,7 @@ class StringDescriptor(JSONSchemaFieldDescriptor[AnyStr]):
                     f"{self._name} is a required property"
                 )
             if type(value) is not str and not isinstance(value, (str, bytes)):
-                raise e.ValueTypeViolation("expected string")
+                raise e.ValueTypeViolation(f"{self._name}={value} expected string")
             if self._min_length is not None and len(value) < self._min_length:
                 raise e.LengthConstraintViolation(
                     f"{self._name}={value} =/= minLength={self._min_length} constraint fails"
@@ -524,7 +524,7 @@ class IntegerDescriptor(JSONSchemaFieldDescriptor[int]):
                     f"{self._name} is a required property"
                 )
             if type(value) is bool or not isinstance(value, int):
-                raise e.ValueTypeViolation("expected integer")
+                raise e.ValueTypeViolation(f"{self._name}={value} expected integer")
             if self._minimum is not None and value < self._minimum:
                 raise e.RangeConstraintViolation(
                     f"{self._name}={value} =/= minimum={self._minimum} constraint fails"
@@ -609,7 +609,7 @@ class NumberDescriptor(JSONSchemaFieldDescriptor[N]):
                     f"{self._name} is a required property"
                 )
             if type(value) is bool or not isinstance(value, (int, float)):
-                raise e.ValueTypeViolation("expected number")
+                raise e.ValueTypeViolation(f"{self._name}={value} expected number")
             if self._minimum is not None and value < self._minimum:
                 raise e.RangeConstraintViolation(
                     f"{self._name}={value} =/= minimum={self._minimum} constraint fails"
