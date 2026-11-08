@@ -1,9 +1,9 @@
 # SPDX-FileCopyrightText: 2023-2026 Civic Hacker LLC
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+import sys
 from re import sub
 from typing import TypeVar
-import sys
 
 T = TypeVar("T")
 
@@ -28,3 +28,9 @@ def ifraises(func, value, reraise_exception, exception_class=ValueError):
 
 def reraises(reraise_exception, exception_class=ValueError):
     raise reraise_exception()
+
+
+def raise_on_none(expression, exception_class):
+    if not expression:
+        raise exception_class()
+    return True

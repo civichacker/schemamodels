@@ -174,6 +174,12 @@ def test_string_hostname_format_support(Factory):
 
     from schemamodels.dynamic import InternetFormat
 
-    fs = InternetFormat(webhost='127.0.0.1')
+    InternetFormat(webhost='git+https://qwdqwdwd.com')
+    InternetFormat(webhost='http://example.com')
+    InternetFormat(webhost='https://sub.domain-name.org')
+    InternetFormat(webhost='coap+tcp://example.com')
+    InternetFormat(webhost='custom-1.scheme://example.com')
+    InternetFormat(webhost='example.com')
     with pytest.raises(exceptions.StringFormatViolation):
         fs = InternetFormat(webhost='qwdqwd//qwdqwdwd.com')
+        fs = InternetFormat(webhost='127.0.0.1')

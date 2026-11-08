@@ -1,15 +1,24 @@
 # SPDX-FileCopyrightText: 2023-2026 Civic Hacker LLC
 # SPDX-License-Identifier: GPL-3.0-or-later
-from datetime import datetime, time, date
 import email.headerregistry
-from functools import partial
 import ipaddress
+import re
+from datetime import date, datetime, time
+from functools import partial
 from operator import contains, ge, gt, le, lt, mod, not_
+from urllib.parse import urlparse
 
 from schemamodels import exceptions
-from schemamodels.utils import ifraises
+from schemamodels.utils import ifraises, raise_on_none
 
 REQUIRED_MISSING = object()
+
+#  https://www.rfc-editor.org/info/rfc3986/#section-3.1
+SCHEME_CHECK_PATTERN = re.compile(r"^[a-z][a-z0-9+.-]*(?=://)", flags=re.IGNORECASE)
+HOSTNAME_PATTERN = re.compile(
+    r"^(?!-)[a-z0-9-]{1,63}(?<!-)(\.(?!-)[a-z0-9-]{1,63}(?<!-))*$",
+    re.IGNORECASE,
+)
 
 DEFAULT_FACTORIES = {
     "string": str,
@@ -66,4 +75,13 @@ STRING_FORMATS = {
     'time': lambda e: ifraises(time.fromisoformat, e, exceptions.StringFormatViolation, exception_class=ValueError),
     'ipv4': lambda e: ifraises(ipaddress.IPv4Address, e, exceptions.StringFormatViolation, exception_class=ipaddress.AddressValueError),
     'ipv6': lambda e: ifraises(ipaddress.IPv6Address, e, exceptions.StringFormatViolation, exception_class=ipaddress.AddressValueError),
+    'hostname': lambda e: raise_on_none(
+        host
+        if (host := (urlparse(e).hostname if SCHEME_CHECK_PATTERN.match(e) else urlparse(f"//{e}").hostname))
+        and len(host) <= 253
+        and HOSTNAME_PATTERN.match(host)
+        and not host.split(".")[-1].isdigit()
+        else None,
+        exceptions.StringFormatViolation,
+    ),
 }
