@@ -69,15 +69,51 @@ COMPARISONS = {
 }
 
 STRING_FORMATS = {
-    'email': lambda e: ifraises(partial(email.headerregistry.Address, addr_spec=e), e, exceptions.StringFormatViolation, exception_class=ValueError),
-    'date-time': lambda e: ifraises(datetime.fromisoformat, e, exceptions.StringFormatViolation, exception_class=ValueError),
-    'date': lambda e: ifraises(date.fromisoformat, e, exceptions.StringFormatViolation, exception_class=ValueError),
-    'time': lambda e: ifraises(time.fromisoformat, e, exceptions.StringFormatViolation, exception_class=ValueError),
-    'ipv4': lambda e: ifraises(ipaddress.IPv4Address, e, exceptions.StringFormatViolation, exception_class=ipaddress.AddressValueError),
-    'ipv6': lambda e: ifraises(ipaddress.IPv6Address, e, exceptions.StringFormatViolation, exception_class=ipaddress.AddressValueError),
-    'hostname': lambda e: raise_on_none(
+    "email": lambda e: ifraises(
+        partial(email.headerregistry.Address, addr_spec=e),
+        e,
+        exceptions.StringFormatViolation,
+        exception_class=ValueError,
+    ),
+    "date-time": lambda e: ifraises(
+        datetime.fromisoformat,
+        e,
+        exceptions.StringFormatViolation,
+        exception_class=ValueError,
+    ),
+    "date": lambda e: ifraises(
+        date.fromisoformat,
+        e,
+        exceptions.StringFormatViolation,
+        exception_class=ValueError,
+    ),
+    "time": lambda e: ifraises(
+        time.fromisoformat,
+        e,
+        exceptions.StringFormatViolation,
+        exception_class=ValueError,
+    ),
+    "ipv4": lambda e: ifraises(
+        ipaddress.IPv4Address,
+        e,
+        exceptions.StringFormatViolation,
+        exception_class=ipaddress.AddressValueError,
+    ),
+    "ipv6": lambda e: ifraises(
+        ipaddress.IPv6Address,
+        e,
+        exceptions.StringFormatViolation,
+        exception_class=ipaddress.AddressValueError,
+    ),
+    "hostname": lambda e: raise_on_none(
         host
-        if (host := (urlparse(e).hostname if SCHEME_CHECK_PATTERN.match(e) else urlparse(f"//{e}").hostname))
+        if (
+            host := (
+                urlparse(e).hostname
+                if SCHEME_CHECK_PATTERN.match(e)
+                else urlparse(f"//{e}").hostname
+            )
+        )
         and len(host) <= 253
         and HOSTNAME_PATTERN.match(host)
         and not host.split(".")[-1].isdigit()
