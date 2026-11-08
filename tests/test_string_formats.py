@@ -182,3 +182,39 @@ def test_string_hostname_format_support(Factory):
     with pytest.raises(exceptions.StringFormatViolation):
         InternetFormat(webhost="qwdqwd//qwdqwdwd.com")
         InternetFormat(webhost="127.0.0.1")
+
+
+@pytest.mark.string
+@pytest.mark.format
+def test_string_uri_format_support(Factory):
+    schemadoc = """
+    {
+        "title": "internet-format",
+        "description": "Blue Blah",
+        "type": "object",
+        "properties": {
+            "resource_uri": {
+              "type": "string",
+              "format": "uri"
+            }
+        }
+    }
+    """
+    stringformat = json.loads(schemadoc)
+    sm = Factory()
+    sm.register(stringformat)
+
+    from schemamodels.dynamic import InternetFormat
+
+    InternetFormat(resource_uri="ftp://ftp.is.co.za/rfc/rfc1808.txt")
+    InternetFormat(resource_uri="http://www.ietf.org/rfc/rfc2396.txt")
+    InternetFormat(resource_uri="ldap://[2001:db8::7]/c=GB?objectClass?one")
+    InternetFormat(resource_uri="mailto:John.Doe@example.com")
+    InternetFormat(resource_uri="news:comp.infosystems.www.servers.unix")
+    InternetFormat(resource_uri="tel:+1-816-555-1212")
+    InternetFormat(resource_uri="telnet://192.0.2.16:80/")
+    InternetFormat(
+        resource_uri="urn:oasis:names:specification:docbook:dtd:xml:4.1.2"
+    )
+    with pytest.raises(exceptions.StringFormatViolation):
+        InternetFormat(resource_uri="abcdefgh")

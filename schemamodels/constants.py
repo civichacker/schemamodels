@@ -19,6 +19,10 @@ HOSTNAME_PATTERN = re.compile(
     r"^(?!-)[a-z0-9-]{1,63}(?<!-)(\.(?!-)[a-z0-9-]{1,63}(?<!-))*$",
     re.IGNORECASE,
 )
+#  https://www.rfc-editor.org/info/rfc3986/#appendix-B
+URI_CHECK_PATTERN = re.compile(
+    r"^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?"
+)
 
 DEFAULT_FACTORIES = {
     "string": str,
@@ -118,6 +122,10 @@ STRING_FORMATS = {
         and HOSTNAME_PATTERN.match(host)
         and not host.split(".")[-1].isdigit()
         else None,
+        exceptions.StringFormatViolation,
+    ),
+    "uri": lambda e: raise_on_none(
+        m.group(2) if (m := URI_CHECK_PATTERN.match(e)) else None,
         exceptions.StringFormatViolation,
     ),
 }
