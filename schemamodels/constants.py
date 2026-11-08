@@ -23,6 +23,12 @@ HOSTNAME_PATTERN = re.compile(
 URI_CHECK_PATTERN = re.compile(
     r"^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?"
 )
+URI_PATTERN = URI_CHECK_PATTERN
+URI_SCHEME_PATTERN = re.compile(r"^[a-z][a-z0-9+.-]*$", flags=re.IGNORECASE)
+UUID_PATTERN = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    flags=re.IGNORECASE,
+)
 
 DEFAULT_FACTORIES = {
     "string": str,
@@ -125,7 +131,47 @@ STRING_FORMATS = {
         exceptions.StringFormatViolation,
     ),
     "uri": lambda e: raise_on_none(
-        m.group(2) if (m := URI_CHECK_PATTERN.match(e)) else None,
+        m.group(2)
+        if isinstance(e, str)
+        and e.isascii()
+        and not re.search(r"[\s<>\"\\^`{|}]", e)
+        and (m := URI_CHECK_PATTERN.match(e))
+        and m.group(2)
+        and URI_SCHEME_PATTERN.match(m.group(2))
+        else None,
+        exceptions.StringFormatViolation,
+    ),
+    "uri-reference": lambda e: raise_on_none(
+        True
+        if isinstance(e, str)
+        and e.isascii()
+        and not re.search(r"[\s<>\"\\^`{|}]", e)
+        and (m := URI_CHECK_PATTERN.match(e))
+        and (m.group(2) is None or URI_SCHEME_PATTERN.match(m.group(2)))
+        else None,
+        exceptions.StringFormatViolation,
+    ),
+    "iri": lambda e: raise_on_none(
+        m.group(2)
+        if isinstance(e, str)
+        and not re.search(r"[\s<>\"\\^`{|}]", e)
+        and (m := URI_CHECK_PATTERN.match(e))
+        and m.group(2)
+        and URI_SCHEME_PATTERN.match(m.group(2))
+        else None,
+        exceptions.StringFormatViolation,
+    ),
+    "iri-reference": lambda e: raise_on_none(
+        True
+        if isinstance(e, str)
+        and not re.search(r"[\s<>\"\\^`{|}]", e)
+        and (m := URI_CHECK_PATTERN.match(e))
+        and (m.group(2) is None or URI_SCHEME_PATTERN.match(m.group(2)))
+        else None,
+        exceptions.StringFormatViolation,
+    ),
+    "uuid": lambda e: raise_on_none(
+        isinstance(e, str) and UUID_PATTERN.match(e),
         exceptions.StringFormatViolation,
     ),
 }
