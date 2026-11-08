@@ -23,7 +23,6 @@ HOSTNAME_PATTERN = re.compile(
 URI_CHECK_PATTERN = re.compile(
     r"^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?"
 )
-URI_PATTERN = URI_CHECK_PATTERN
 URI_SCHEME_PATTERN = re.compile(r"^[a-z][a-z0-9+.-]*$", flags=re.IGNORECASE)
 UUID_PATTERN = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
