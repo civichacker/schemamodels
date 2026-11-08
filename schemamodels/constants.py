@@ -1,10 +1,13 @@
 # SPDX-FileCopyrightText: 2023-2026 Civic Hacker LLC
 # SPDX-License-Identifier: GPL-3.0-or-later
-from datetime import datetime
-import email.utils
+from datetime import datetime, time, date
+import email.headerregistry
 from functools import partial
 import ipaddress
 from operator import contains, ge, gt, le, lt, mod, not_
+
+from schemamodels import exceptions
+from schemamodels.utils import ifraises
 
 REQUIRED_MISSING = object()
 
@@ -50,7 +53,17 @@ COMPARISONS = {
     "exclusiveMinimum": lambda d: partial(lt, d),
     "exclusiveMaximum": lambda d: partial(gt, d),
     "enum": lambda d: partial(contains, d),
+    "format": lambda d: partial(lambda bound, v: STRING_FORMATS[bound](v), d),
     "maxLength": lambda d: partial(lambda bound, v: len(v) <= bound, d),
     "minLength": lambda d: partial(lambda bound, v: len(v) >= bound, d),
     "multipleOf": lambda d: partial(lambda d, n: mod(n, d) == 0, d),
+}
+
+STRING_FORMATS = {
+    'email': lambda e: ifraises(partial(email.headerregistry.Address, addr_spec=e), e, exceptions.StringFormatViolation, exception_class=ValueError),
+    'date-time': lambda e: ifraises(datetime.fromisoformat, e, exceptions.StringFormatViolation, exception_class=ValueError),
+    'date': lambda e: ifraises(date.fromisoformat, e, exceptions.StringFormatViolation, exception_class=ValueError),
+    'time': lambda e: ifraises(time.fromisoformat, e, exceptions.StringFormatViolation, exception_class=ValueError),
+    'ipv4': lambda e: ifraises(ipaddress.IPv4Address, e, exceptions.StringFormatViolation, exception_class=ipaddress.AddressValueError),
+    'ipv6': lambda e: ifraises(ipaddress.IPv6Address, e, exceptions.StringFormatViolation, exception_class=ipaddress.AddressValueError),
 }

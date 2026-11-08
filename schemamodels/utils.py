@@ -3,6 +3,7 @@
 
 from re import sub
 from typing import TypeVar
+import sys
 
 T = TypeVar("T")
 
