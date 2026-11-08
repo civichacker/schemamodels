@@ -9,7 +9,7 @@ from functools import partial
 from operator import contains, ge, gt, le, lt, mod, not_
 from typing import Any, AnyStr, ClassVar, Protocol, Self, TypeVar, get_args
 
-from schemamodels import exceptions as e
+from schemamodels import exceptions as e, constants
 from schemamodels.constants import JSON_TYPE_MAP, REQUIRED_MISSING
 
 
@@ -434,6 +434,10 @@ class StringDescriptor(JSONSchemaFieldDescriptor[AnyStr]):
             "comparator": lambda d: partial(lambda bound, v: len(v) >= bound, d),
             "errorClass": e.LengthConstraintViolation,
         },
+        "format": {
+            "comparator": lambda d: partial(lambda bound, v: constants.STRING_FORMATS[bound](v), d),
+            "errorClass": e.StringFormatViolation
+        }
     }
 
     def __init__(self, *, default=None, metadata=None):
