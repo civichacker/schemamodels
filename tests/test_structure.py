@@ -120,7 +120,9 @@ def test_required_keyword_runtime_enforcement(Factory):
     from schemamodels.dynamic import MultiReqEnforcementSchema
 
     # 1. Valid instance with all required provided and status using default
-    instance = MultiReqEnforcementSchema(username="john_doe", email="john@example.com", age=25)
+    instance = MultiReqEnforcementSchema(
+        username="john_doe", email="john@example.com", age=25
+    )
     assert instance.username == "john_doe"
     assert instance.email == "john@example.com"
     assert instance.age == 25
@@ -142,7 +144,9 @@ def test_required_keyword_runtime_enforcement(Factory):
 
     # 4. Missing required field AND constraint violation raises ExceptionGroup with both
     with pytest.raises(ExceptionGroup) as exc_info:
-        MultiReqEnforcementSchema(username="jo", age=16)  # missing email, minLength fails, minimum fails
+        MultiReqEnforcementSchema(
+            username="jo", age=16
+        )  # missing email, minLength fails, minimum fails
     assert len(exc_info.value.exceptions) >= 2
     err_types = {type(err) for err in exc_info.value.exceptions}
     assert exceptions.RequiredPropertyViolation in err_types

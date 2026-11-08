@@ -16,3 +16,4 @@ pytest.ini
 *.json
 .env
 .idea/
+.junie/

@@ -6,6 +6,7 @@
 """
 Root entry point for profiling SchemaModelFactory V1 vs V2.
 """
+
 from profiling.profile_factories import run_profile
 
 if __name__ == "__main__":

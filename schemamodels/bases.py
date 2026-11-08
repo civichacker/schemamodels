@@ -9,7 +9,7 @@ from functools import partial
 from operator import contains, ge, gt, le, lt, mod, not_
 from typing import Any, AnyStr, ClassVar, Protocol, Self, TypeVar, get_args
 
-from schemamodels import exceptions as e
+from schemamodels import exceptions as e, constants
 from schemamodels.constants import JSON_TYPE_MAP, REQUIRED_MISSING
 
 
@@ -434,12 +434,19 @@ class StringDescriptor(JSONSchemaFieldDescriptor[AnyStr]):
             "comparator": lambda d: partial(lambda bound, v: len(v) >= bound, d),
             "errorClass": e.LengthConstraintViolation,
         },
+        "format": {
+            "comparator": lambda d: partial(
+                lambda bound, v: constants.STRING_FORMATS[bound](v), d
+            ),
+            "errorClass": e.StringFormatViolation,
+        },
     }
 
     def __init__(self, *, default=None, metadata=None):
         super().__init__(default=default, metadata=metadata or {})
         self._min_length = self._metadata.get("minLength")
         self._max_length = self._metadata.get("maxLength")
+        self._format = self._metadata.get("format")
 
     def __set__(self, obj, value):
         errors = (
@@ -459,6 +466,12 @@ class StringDescriptor(JSONSchemaFieldDescriptor[AnyStr]):
             if self._max_length is not None and len(value) > self._max_length:
                 raise e.LengthConstraintViolation(
                     f"{self._name}={value} =/= maxLength={self._max_length} constraint fails"
+                )
+            if self._format is not None and not self.COMPARISONS["format"][
+                "comparator"
+            ](self._format)(value):
+                raise self.COMPARISONS["format"]["errorClass"](
+                    f"{self._name}={value} =/= format={self._format} constraint fails"
                 )
             if self._enum is not None and value not in self._enum:
                 raise e.ValueTypeViolation(

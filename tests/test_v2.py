@@ -518,8 +518,7 @@ def test_schema_model_factory_v2_full_model():
     d = user.todict()
     assert d["username"] == "john_doe"
     assert d["age"] == 25
-    l = user.tolist()
-    assert "john_doe" in l
+    assert "john_doe" in user.tolist()
     csv = user.tocsv(header=True)
     assert "username" in csv
     assert "john_doe" in csv
@@ -535,7 +534,6 @@ def test_schema_model_factory_v2_full_model():
     # Validation failure on balance type
     with pytest.raises(e.ValueTypeViolation):
         ComprehensiveVtwoUserSchema(username="john_doe", age=25, balance="100.0")
-
 
 
 @pytest.mark.v2
@@ -593,9 +591,7 @@ def test_json_schema_field_descriptor():
 
     # Subschema failure
     class SubschemaTestClass:
-        sub_field = v2.JSONSchemaFieldDescriptor(
-            metadata={"allOf": [{"minLength": 5}]}
-        )
+        sub_field = v2.JSONSchemaFieldDescriptor(metadata={"allOf": [{"minLength": 5}]})
 
     sub_inst = SubschemaTestClass()
     with pytest.raises(e.SubSchemaFailureViolation):
