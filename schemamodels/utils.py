@@ -14,3 +14,16 @@ def generate_classname(title: str) -> str:
 def is_schema_toplevel_object(schema: dict) -> bool:
     reqkws = {"title", "type", "properties"}
     return not (not reqkws <= schema.keys() or schema.get("type", None) != "object")
+
+
+def ifraises(func, value, reraise_exception, exception_class=ValueError):
+    try:
+        func(value)
+    except exception_class:
+        tb = sys.exception().__traceback__
+        raise reraise_exception().with_traceback(tb)
+    return True
+
+
+def reraises(reraise_exception, exception_class=ValueError):
+    raise reraise_exception()
