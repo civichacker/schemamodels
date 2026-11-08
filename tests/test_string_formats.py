@@ -1,13 +1,16 @@
-import json
-import pytest
 import importlib
+import json
+
+import pytest
+
 from schemamodels import exceptions
+
 
 @pytest.mark.string
 @pytest.mark.format
 @pytest.mark.email
 def test_string_email_format_support(Factory):
-    schemadoc = '''
+    schemadoc = """
     {
         "title": "email-format",
         "description": "Blue Blah",
@@ -19,7 +22,7 @@ def test_string_email_format_support(Factory):
             }
         }
     }
-    '''
+    """
     stringformat = json.loads(schemadoc)
     importlib.import_module("schemamodels.dynamic")
     sm = Factory()
@@ -27,15 +30,15 @@ def test_string_email_format_support(Factory):
 
     from schemamodels.dynamic import EmailFormat
 
-    fs = EmailFormat(user_email="test@examplemail.co")
+    EmailFormat(user_email="test@examplemail.co")
     with pytest.raises(exceptions.StringFormatViolation):
-        fs = EmailFormat(user_email="abcdefgh")
+        EmailFormat(user_email="abcdefgh")
 
 
 @pytest.mark.string
 @pytest.mark.format
 def test_string_datetime_format_support(Factory):
-    schemadoc = '''
+    schemadoc = """
     {
         "title": "date-time-format",
         "description": "Blue Blah",
@@ -47,23 +50,22 @@ def test_string_datetime_format_support(Factory):
             }
         }
     }
-    '''
+    """
     stringformat = json.loads(schemadoc)
     sm = Factory()
     sm.register(stringformat)
 
     from schemamodels.dynamic import DateTimeFormat
 
-
-    fs = DateTimeFormat(event_time="2018-11-13T20:20:39+00:00")
+    DateTimeFormat(event_time="2018-11-13T20:20:39+00:00")
     with pytest.raises(exceptions.StringFormatViolation):
-        fs = DateTimeFormat(event_time="abcdefgh")
+        DateTimeFormat(event_time="abcdefgh")
 
 
 @pytest.mark.string
 @pytest.mark.format
 def test_string_date_format_support(Factory):
-    schemadoc = '''
+    schemadoc = """
     {
         "title": "date-format",
         "description": "Blue Blah",
@@ -75,26 +77,25 @@ def test_string_date_format_support(Factory):
             }
         }
     }
-    '''
+    """
     stringformat = json.loads(schemadoc)
     sm = Factory()
     sm.register(stringformat)
 
     from schemamodels.dynamic import DateFormat
 
-
-    fs = DateFormat(event_time="2018-11-13")
-    fs = DateFormat(event_time="20181113")
+    DateFormat(event_time="2018-11-13")
+    DateFormat(event_time="20181113")
     with pytest.raises(exceptions.StringFormatViolation):
-        fs = DateFormat(event_time="Nov 13, 2018")
-        fs = DateFormat(event_time="November 13, 2018")
-        fs = DateFormat(event_time="abcdefgh")
+        DateFormat(event_time="Nov 13, 2018")
+        DateFormat(event_time="November 13, 2018")
+        DateFormat(event_time="abcdefgh")
 
 
 @pytest.mark.string
 @pytest.mark.format
 def test_string_time_format_support(Factory):
-    schemadoc = '''
+    schemadoc = """
     {
         "title": "time-format",
         "description": "Blue Blah",
@@ -106,29 +107,24 @@ def test_string_time_format_support(Factory):
             }
         }
     }
-    '''
+    """
     stringformat = json.loads(schemadoc)
     sm = Factory()
     sm.register(stringformat)
 
     from schemamodels.dynamic import TimeFormat
 
-
-    fs = TimeFormat(event_time="23:20:00")
+    TimeFormat(event_time="23:20:00")
     with pytest.raises(exceptions.StringFormatViolation):
-        fs = TimeFormat(event_time="27:20:00")
-        fs = TimeFormat(event_time="2023-12-02")
-        fs = TimeFormat(event_time="abcdefgh")
-
-
-
-
+        TimeFormat(event_time="27:20:00")
+        TimeFormat(event_time="2023-12-02")
+        TimeFormat(event_time="abcdefgh")
 
 
 @pytest.mark.string
 @pytest.mark.format
 def test_string_ipaddress_format_support(Factory):
-    schemadoc = '''
+    schemadoc = """
     {
         "title": "internet-format",
         "description": "Blue Blah",
@@ -140,22 +136,22 @@ def test_string_ipaddress_format_support(Factory):
             }
         }
     }
-    '''
+    """
     stringformat = json.loads(schemadoc)
     sm = Factory()
     sm.register(stringformat)
 
     from schemamodels.dynamic import InternetFormat
 
-    fs = InternetFormat(event_location='127.0.0.1')
+    InternetFormat(event_location="127.0.0.1")
     with pytest.raises(exceptions.StringFormatViolation):
-        fs = InternetFormat(event_location='welpwelp')
+        InternetFormat(event_location="welpwelp")
 
 
 @pytest.mark.string
 @pytest.mark.format
 def test_string_hostname_format_support(Factory):
-    schemadoc = '''
+    schemadoc = """
     {
         "title": "internet-format",
         "description": "Blue Blah",
@@ -167,19 +163,19 @@ def test_string_hostname_format_support(Factory):
             }
         }
     }
-    '''
+    """
     stringformat = json.loads(schemadoc)
     sm = Factory()
     sm.register(stringformat)
 
     from schemamodels.dynamic import InternetFormat
 
-    InternetFormat(webhost='git+https://qwdqwdwd.com')
-    InternetFormat(webhost='http://example.com')
-    InternetFormat(webhost='https://sub.domain-name.org')
-    InternetFormat(webhost='coap+tcp://example.com')
-    InternetFormat(webhost='custom-1.scheme://example.com')
-    InternetFormat(webhost='example.com')
+    InternetFormat(webhost="git+https://qwdqwdwd.com")
+    InternetFormat(webhost="http://example.com")
+    InternetFormat(webhost="https://sub.domain-name.org")
+    InternetFormat(webhost="coap+tcp://example.com")
+    InternetFormat(webhost="custom-1.scheme://example.com")
+    InternetFormat(webhost="example.com")
     with pytest.raises(exceptions.StringFormatViolation):
-        fs = InternetFormat(webhost='qwdqwd//qwdqwdwd.com')
-        fs = InternetFormat(webhost='127.0.0.1')
+        InternetFormat(webhost="qwdqwd//qwdqwdwd.com")
+        InternetFormat(webhost="127.0.0.1")

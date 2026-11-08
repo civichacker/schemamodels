@@ -26,10 +26,6 @@ def ifraises(func, value, reraise_exception, exception_class=ValueError):
     return True
 
 
-def reraises(reraise_exception, exception_class=ValueError):
-    raise reraise_exception()
-
-
 def raise_on_none(expression, exception_class):
     if not expression:
         raise exception_class()

@@ -435,9 +435,11 @@ class StringDescriptor(JSONSchemaFieldDescriptor[AnyStr]):
             "errorClass": e.LengthConstraintViolation,
         },
         "format": {
-            "comparator": lambda d: partial(lambda bound, v: constants.STRING_FORMATS[bound](v), d),
-            "errorClass": e.StringFormatViolation
-        }
+            "comparator": lambda d: partial(
+                lambda bound, v: constants.STRING_FORMATS[bound](v), d
+            ),
+            "errorClass": e.StringFormatViolation,
+        },
     }
 
     def __init__(self, *, default=None, metadata=None):
@@ -465,8 +467,10 @@ class StringDescriptor(JSONSchemaFieldDescriptor[AnyStr]):
                 raise e.LengthConstraintViolation(
                     f"{self._name}={value} =/= maxLength={self._max_length} constraint fails"
                 )
-            if self._format is not None and not self.COMPARISONS['format']['comparator'](self._format)(value):
-                raise self.COMPARISONS['format']['errorClass'](
+            if self._format is not None and not self.COMPARISONS["format"][
+                "comparator"
+            ](self._format)(value):
+                raise self.COMPARISONS["format"]["errorClass"](
                     f"{self._name}={value} =/= format={self._format} constraint fails"
                 )
             if self._enum is not None and value not in self._enum:

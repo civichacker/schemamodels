@@ -537,7 +537,6 @@ def test_schema_model_factory_v2_full_model():
         ComprehensiveVtwoUserSchema(username="john_doe", age=25, balance="100.0")
 
 
-
 @pytest.mark.v2
 @pytest.mark.descriptor
 @pytest.mark.multierror
@@ -593,9 +592,7 @@ def test_json_schema_field_descriptor():
 
     # Subschema failure
     class SubschemaTestClass:
-        sub_field = v2.JSONSchemaFieldDescriptor(
-            metadata={"allOf": [{"minLength": 5}]}
-        )
+        sub_field = v2.JSONSchemaFieldDescriptor(metadata={"allOf": [{"minLength": 5}]})
 
     sub_inst = SubschemaTestClass()
     with pytest.raises(e.SubSchemaFailureViolation):
