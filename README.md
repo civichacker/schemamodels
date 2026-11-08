@@ -45,7 +45,7 @@ This library **only** supports JSON schemas of `type: object`:
 ```python
 from schemamodels import SchemaModelFactory
 
-schema_string = '..'
+schema_string = ".."
 my_json_schema = json.loads(schema_string)
 
 factory = SchemaModelFactory()
@@ -62,8 +62,7 @@ from schemamodels.dynamic import FakeSchema
 your_data_instance = FakeSchema(property_a=2334)  # OK
 
 with pytest.raises(exceptions.ValueTypeViolation):
-  your_data_instance = FakeSchema(property_a="hello")
-
+    your_data_instance = FakeSchema(property_a="hello")
 ```
 
 ### Required Fields Behavior
