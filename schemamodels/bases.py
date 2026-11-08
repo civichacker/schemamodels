@@ -444,6 +444,7 @@ class StringDescriptor(JSONSchemaFieldDescriptor[AnyStr]):
         super().__init__(default=default, metadata=metadata or {})
         self._min_length = self._metadata.get("minLength")
         self._max_length = self._metadata.get("maxLength")
+        self._format = self._metadata.get("format")
 
     def __set__(self, obj, value):
         errors = (
@@ -463,6 +464,10 @@ class StringDescriptor(JSONSchemaFieldDescriptor[AnyStr]):
             if self._max_length is not None and len(value) > self._max_length:
                 raise e.LengthConstraintViolation(
                     f"{self._name}={value} =/= maxLength={self._max_length} constraint fails"
+                )
+            if self._format is not None and not self.COMPARISONS['format']['comparator'](self._format)(value):
+                raise self.COMPARISONS['format']['errorClass'](
+                    f"{self._name}={value} =/= format={self._format} constraint fails"
                 )
             if self._enum is not None and value not in self._enum:
                 raise e.ValueTypeViolation(

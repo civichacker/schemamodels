@@ -5,6 +5,7 @@ from schemamodels import exceptions
 
 @pytest.mark.string
 @pytest.mark.format
+@pytest.mark.email
 def test_string_email_format_support(Factory):
     schemadoc = '''
     {

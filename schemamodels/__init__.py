@@ -481,6 +481,7 @@ class SchemaModelFactoryV2(SchemaModelFactory):
                     "exclusiveMinimum",
                     "exclusiveMaximum",
                     "multipleOf",
+                    "format",
                     "not",
                     "anyOf",
                     "allOf",
