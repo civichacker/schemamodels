@@ -9,5 +9,5 @@ def test_generate_classname():
 
 
 def test_detect_schema_object(simple_schema, malformed_schema):
-    assert utils.is_schema_object(simple_schema)
-    assert not utils.is_schema_object(malformed_schema)
+    assert utils.is_schema_toplevel_object(simple_schema)
+    assert not utils.is_schema_toplevel_object(malformed_schema)

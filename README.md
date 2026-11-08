@@ -45,7 +45,7 @@ This library **only** supports JSON schemas of `type: object`:
 ```python
 from schemamodels import SchemaModelFactory
 
-schema_string = '..'
+schema_string = ".."
 my_json_schema = json.loads(schema_string)
 
 factory = SchemaModelFactory()
@@ -62,9 +62,19 @@ from schemamodels.dynamic import FakeSchema
 your_data_instance = FakeSchema(property_a=2334)  # OK
 
 with pytest.raises(exceptions.ValueTypeViolation):
-  your_data_instance = FakeSchema(property_a="hello")
-
+    your_data_instance = FakeSchema(property_a="hello")
 ```
+
+### Required Fields Behavior
+
+> **Design Decision Note**:
+> In standard JSON Schema specifications, object properties are optional by default unless explicitly listed in the `required` array (see [Understanding JSON Schema: required](https://json-schema.org/understanding-json-schema/reference/object#required)).
+>
+> In `schemamodels`, **a missing `required` keyword means that all fields are required**. When registering an object schema without a `required` keyword, all defined properties without explicit `default` values become required fields.
+>
+> To make fields optional, either:
+> - Explicitly define the `required` keyword with only the mandatory properties (e.g., `"required": ["property_a"]` or `"required": []` to make all fields optional).
+> - Specify an explicit `"default"` value on the property definition.
 
 ## Why this library exists
 
@@ -123,19 +133,17 @@ The performance benchmark evaluates `SchemaModelFactory` (V1, based on functor d
 
 | Phase | V1 Time (s) | V2 Time (s) | Speedup |
 | --- | --- | --- | --- |
-| Registration | 0.002731 | 0.002717 | 1.00x |
-| Instantiation & Validate | 0.395232 | 0.236198 | 1.67x |
-| Serialization (todict/csv) | 0.061095 | 0.093046 | 0.66x |
-| **Total Time** | **0.459057** | **0.331961** | **1.38x** |
+| Registration | 0.008996 | 0.007591 | 1.19x |
+| Instantiation & Validate | 0.774447 | 0.302700 | 2.56x |
+| **Total Time** | **0.783443** | **0.310291** | **2.52x** |
 
 ### Python 3.15.2 Execution Metrics
 
 | Phase | V1 Time (s) | V2 Time (s) | Speedup |
 | --- | --- | --- | --- |
-| Registration | 0.002112 | 0.001921 | 1.10x |
-| Instantiation & Validate | 0.372480 | 0.201000 | 1.85x |
-| Serialization (todict/csv) | 0.050852 | 0.083679 | 0.61x |
-| **Total Time** | **0.425444** | **0.286600** | **1.48x** |
+| Registration | 0.011681 | 0.005333 | 2.19x |
+| Instantiation & Validate | 0.655611 | 0.225569 | 2.91x |
+| **Total Time** | **0.667292** | **0.230902** | **2.89x** |
 
 ## License
 
