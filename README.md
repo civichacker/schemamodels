@@ -102,26 +102,52 @@ Below is the current support status for the keywords defined in [Section 6 (A Vo
 
 | Keyword | Section | Category | Supported |
 | --- | --- | --- | --- |
-| `type` | 6.1.1 | Any Instance Type | Yes |
-| `enum` | 6.1.2 | Any Instance Type | Yes |
-| `const` | 6.1.3 | Any Instance Type | No |
-| `multipleOf` | 6.2.1 | Numeric Instances | Yes |
-| `maximum` | 6.2.2 | Numeric Instances | Yes |
-| `exclusiveMaximum` | 6.2.3 | Numeric Instances | Yes |
-| `minimum` | 6.2.4 | Numeric Instances | Yes |
-| `exclusiveMinimum` | 6.2.5 | Numeric Instances | Yes |
-| `maxLength` | 6.3.1 | String Instances | Yes |
-| `minLength` | 6.3.2 | String Instances | Yes |
-| `pattern` | 6.3.3 | String Instances | No |
-| `maxItems` | 6.4.1 | Array Instances | No |
-| `minItems` | 6.4.2 | Array Instances | No |
-| `uniqueItems` | 6.4.3 | Array Instances | No |
-| `maxContains` | 6.4.4 | Array Instances | No |
-| `minContains` | 6.4.5 | Array Instances | No |
-| `maxProperties` | 6.5.1 | Object Instances | No |
-| `minProperties` | 6.5.2 | Object Instances | No |
-| `required` | 6.5.3 | Object Instances | Yes |
-| `dependentRequired` | 6.5.4 | Object Instances | No |
+| `type` | 6.1.1 | Any Instance Type | ✅ |
+| `enum` | 6.1.2 | Any Instance Type | ✅ |
+| `const` | 6.1.3 | Any Instance Type | ❌ |
+| `multipleOf` | 6.2.1 | Numeric Instances | ✅ |
+| `maximum` | 6.2.2 | Numeric Instances | ✅ |
+| `exclusiveMaximum` | 6.2.3 | Numeric Instances | ✅ |
+| `minimum` | 6.2.4 | Numeric Instances | ✅ |
+| `exclusiveMinimum` | 6.2.5 | Numeric Instances | ✅ |
+| `maxLength` | 6.3.1 | String Instances | ✅ |
+| `minLength` | 6.3.2 | String Instances | ✅ |
+| `pattern` | 6.3.3 | String Instances | ❌ |
+| `maxItems` | 6.4.1 | Array Instances | ❌ |
+| `minItems` | 6.4.2 | Array Instances | ❌ |
+| `uniqueItems` | 6.4.3 | Array Instances | ❌ |
+| `maxContains` | 6.4.4 | Array Instances | ❌ |
+| `minContains` | 6.4.5 | Array Instances | ❌ |
+| `maxProperties` | 6.5.1 | Object Instances | ❌ |
+| `minProperties` | 6.5.2 | Object Instances | ❌ |
+| `required` | 6.5.3 | Object Instances | ✅ |
+| `dependentRequired` | 6.5.4 | Object Instances | ❌ |
+
+## JSON Schema 2020-12 String Format Support
+
+Below is the current support status for the string `format` keywords defined in [Section 7.3 (Defined Formats)](https://json-schema.org/draft/2020-12/json-schema-validation#name-defined-formats) of the JSON Schema 2020-12 specification:
+
+| Format | Section | Category | Supported |
+| --- | --- | --- | --- |
+| `date-time` | 7.3.1 | Dates, Times, and Duration | ✅ |
+| `date` | 7.3.1 | Dates, Times, and Duration | ✅ |
+| `time` | 7.3.1 | Dates, Times, and Duration | ✅ |
+| `duration` | 7.3.1 | Dates, Times, and Duration | ❌ |
+| `email` | 7.3.2 | Email Addresses | ✅ |
+| `idn-email` | 7.3.2 | Email Addresses | ❌ |
+| `hostname` | 7.3.3 | Hostnames | ✅ |
+| `idn-hostname` | 7.3.3 | Hostnames | ❌ |
+| `ipv4` | 7.3.4 | IP Addresses | ✅ |
+| `ipv6` | 7.3.4 | IP Addresses | ✅ |
+| `uri` | 7.3.5 | Resource Identifiers | ✅ |
+| `uri-reference` | 7.3.5 | Resource Identifiers | ✅ |
+| `iri` | 7.3.5 | Resource Identifiers | ✅ |
+| `iri-reference` | 7.3.5 | Resource Identifiers | ✅ |
+| `uuid` | 7.3.5 | Resource Identifiers | ✅ |
+| `uri-template` | 7.3.6 | URI Template | ❌ |
+| `json-pointer` | 7.3.7 | JSON Pointers | ❌ |
+| `relative-json-pointer` | 7.3.7 | JSON Pointers | ❌ |
+| `regex` | 7.3.8 | Regular Expressions | ❌ |
 
 ## Benchmark Overview
 
