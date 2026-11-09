@@ -14,9 +14,9 @@ jobs:
     steps:
       - checkout
       - python/install-packages:
-          pkg-manager: poetry
+          pkg-manager: uv
       - run:
-          command: poetry run pytest
+          command: uv run pytest
           name: Python << parameters.version >> tests
   code coverage over 90:
     executor: python/default
@@ -25,8 +25,8 @@ jobs:
     steps:
       - checkout
       - python/install-packages:
-          pkg-manager: poetry
-      - run: poetry run pytest --cov --cov-branch --cov-fail-under=90 --cov-report html
+          pkg-manager: uv
+      - run: uv run pytest --cov --cov-branch --cov-fail-under=90 --cov-report html
       - store_artifacts:
           path: htmlcov
   lint:
@@ -36,8 +36,8 @@ jobs:
     steps:
       - checkout
       - python/install-packages:
-          pkg-manager: poetry
-      - run: poetry run flake8 --max-complexity=15 schemamodels
+          pkg-manager: uv
+      - run: uv run flake8 --max-complexity=15 schemamodels
   unused code check:
     executor: python/default
     docker:
@@ -45,8 +45,8 @@ jobs:
     steps:
       - checkout
       - python/install-packages:
-          pkg-manager: poetry
-      - run: poetry run vulture schemamodels
+          pkg-manager: uv
+      - run: uv run vulture schemamodels
   fsf compliance:
     executor: python/default
     docker:
@@ -54,8 +54,8 @@ jobs:
     steps:
       - checkout
       - python/install-packages:
-          pkg-manager: poetry
-      - run: poetry run reuse lint
+          pkg-manager: uv
+      - run: uv run reuse lint
 
 
 workflows:

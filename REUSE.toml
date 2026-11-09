@@ -1,0 +1,15 @@
+version = 1
+SPDX-PackageName = "schemamodels"
+SPDX-PackageSupplier = "Civic Hacker LLC"
+SPDX-FileCopyrightText = "2023-2026 Civic Hacker LLC"
+SPDX-PackageDownloadLocation = "https://github.com/civichacker/schemamodels"
+
+[[annotations]]
+path = ["./poetry.lock"]
+precedence = "override"
+SPDX-License-Identifier = "CC0-1.0"
+
+[[annotations]]
+path = ["./pyproject.toml", "./uv.lock"]
+precedence = "override"
+SPDX-License-Identifier = "GPL-3.0-or-later"
