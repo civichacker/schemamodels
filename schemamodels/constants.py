@@ -28,6 +28,10 @@ UUID_PATTERN = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
     flags=re.IGNORECASE,
 )
+# https://www.rfc-editor.org/info/rfc3339/#appendix-A
+DURATION_PATTERN = re.compile(
+    r"^P([0-9]+W|T([0-9]+H([0-9]+M([0-9]+S)?)?|[0-9]+M([0-9]+S)?|[0-9]+S)|([0-9]+D|[0-9]+M([0-9]+D)?|[0-9]+Y([0-9]+M([0-9]+D)?)?)(T([0-9]+H([0-9]+M([0-9]+S)?)?|[0-9]+M([0-9]+S)?|[0-9]+S))?)$"
+)
 
 DEFAULT_FACTORIES = {
     "string": str,
@@ -171,6 +175,10 @@ STRING_FORMATS = {
     ),
     "uuid": lambda e: raise_on_none(
         isinstance(e, str) and UUID_PATTERN.match(e),
+        exceptions.StringFormatViolation,
+    ),
+    "duration": lambda e: raise_on_none(
+        isinstance(e, str) and DURATION_PATTERN.match(e),
         exceptions.StringFormatViolation,
     ),
 }
