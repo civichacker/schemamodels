@@ -427,11 +427,11 @@ class CollectionDescriptor(JSONSchemaFieldDescriptor[C]):
 class StringDescriptor(JSONSchemaFieldDescriptor[AnyStr]):
     COMPARISONS: ClassVar[dict] = {
         "maxLength": {
-            "comparator": lambda d: partial(lambda bound, v: len(v) <= bound, d),
+            "comparator": lambda d: partial(lambda bound, v: len(v) <= int(bound), d),
             "errorClass": e.LengthConstraintViolation,
         },
         "minLength": {
-            "comparator": lambda d: partial(lambda bound, v: len(v) >= bound, d),
+            "comparator": lambda d: partial(lambda bound, v: len(v) >= int(bound), d),
             "errorClass": e.LengthConstraintViolation,
         },
         "format": {
@@ -623,24 +623,24 @@ class NumberDescriptor(JSONSchemaFieldDescriptor[N]):
                 )
             if type(value) is bool or not isinstance(value, (int, float)):
                 raise e.ValueTypeViolation(f"{self._name}={value} expected number")
-            if self._minimum is not None and value < self._minimum:
-                raise e.RangeConstraintViolation(
+            if self._minimum is not None and not self.COMPARISONS["minimum"]["comparator"](self._minimum)(value):
+                raise self.COMPARISONS["minimum"]["errorClass"](
                     f"{self._name}={value} =/= minimum={self._minimum} constraint fails"
                 )
-            if self._maximum is not None and value > self._maximum:
-                raise e.RangeConstraintViolation(
+            if self._maximum is not None and not self.COMPARISONS["maximum"]["comparator"](self._maximum)(value):
+                raise self.COMPARISONS["maximum"]["errorClass"](
                     f"{self._name}={value} =/= maximum={self._maximum} constraint fails"
                 )
-            if self._exclusive_minimum is not None and value <= self._exclusive_minimum:
-                raise e.RangeConstraintViolation(
+            if self._exclusive_minimum is not None and not self.COMPARISONS["exclusiveMinimum"]["comparator"](self._exclusive_minimum)(value):
+                raise self.COMPARISONS["exclusiveMinimum"]["errorClass"](
                     f"{self._name}={value} =/= exclusiveMinimum={self._exclusive_minimum} constraint fails"
                 )
-            if self._exclusive_maximum is not None and value >= self._exclusive_maximum:
-                raise e.RangeConstraintViolation(
+            if self._exclusive_maximum is not None and not self.COMPARISONS["exclusiveMaximum"]["comparator"](self._exclusive_maximum)(value):
+                raise self.COMPARISONS["exclusiveMaximum"]["errorClass"](
                     f"{self._name}={value} =/= exclusiveMaximum={self._exclusive_maximum} constraint fails"
                 )
-            if self._multiple_of is not None and value % self._multiple_of != 0:
-                raise e.RangeConstraintViolation(
+            if self._multiple_of is not None and not self.COMPARISONS["multipleOf"]["comparator"](self._multiple_of)(value):
+                raise self.COMPARISONS["multipleOf"]["errorClass"](
                     f"{self._name}={value} =/= multipleOf={self._multiple_of} constraint fails"
                 )
             if self._enum is not None and value not in self._enum:

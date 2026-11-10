@@ -751,3 +751,53 @@ def test_v2_exports_and_parity():
         v2_cls = getattr(v2, name)
         bases_cls = getattr(bases, name)
         assert v2_cls is bases_cls
+
+
+@pytest.mark.v2
+@pytest.mark.descriptor
+def test_all_descriptors_comparisons():
+    descriptor_classes = [
+        v2.JSONSchemaFieldDescriptor,
+        v2.ArrayDescriptor,
+        v2.BooleanDescriptor,
+        v2.CollectionDescriptor,
+        v2.IntegerDescriptor,
+        v2.NullDescriptor,
+        v2.NumberDescriptor,
+        v2.ObjectDescriptor,
+        v2.SpecialKeywordDescriptor,
+        v2.StringDescriptor,
+    ]
+    for desc_cls in descriptor_classes:
+        assert hasattr(desc_cls, "COMPARISONS")
+        assert isinstance(desc_cls.COMPARISONS, dict)
+
+    assert set(v2.StringDescriptor.COMPARISONS.keys()) == {
+        "maxLength",
+        "minLength",
+        "format",
+    }
+    assert set(v2.IntegerDescriptor.COMPARISONS.keys()) == {
+        "minimum",
+        "maximum",
+        "exclusiveMinimum",
+        "exclusiveMaximum",
+        "multipleOf",
+    }
+    assert set(v2.NumberDescriptor.COMPARISONS.keys()) == {
+        "minimum",
+        "maximum",
+        "exclusiveMinimum",
+        "exclusiveMaximum",
+        "multipleOf",
+    }
+    assert set(v2.CollectionDescriptor.COMPARISONS.keys()) == {
+        "maxLength",
+        "minLength",
+    }
+    assert v2.ArrayDescriptor.COMPARISONS == {}
+    assert v2.BooleanDescriptor.COMPARISONS == {}
+    assert v2.ObjectDescriptor.COMPARISONS == {}
+    assert v2.NullDescriptor.COMPARISONS == {}
+    assert v2.SpecialKeywordDescriptor.COMPARISONS == {}
+    assert v2.JSONSchemaFieldDescriptor.COMPARISONS == {}
