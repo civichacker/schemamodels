@@ -132,7 +132,7 @@ Below is the current support status for the string `format` keywords defined in 
 | `date-time` | 7.3.1 | Dates, Times, and Duration | ✅ |
 | `date` | 7.3.1 | Dates, Times, and Duration | ✅ |
 | `time` | 7.3.1 | Dates, Times, and Duration | ✅ |
-| `duration` | 7.3.1 | Dates, Times, and Duration | ❌ |
+| `duration` | 7.3.1 | Dates, Times, and Duration | ✅ |
 | `email` | 7.3.2 | Email Addresses | ✅ |
 | `idn-email` | 7.3.2 | Email Addresses | ❌ |
 | `hostname` | 7.3.3 | Hostnames | ✅ |
