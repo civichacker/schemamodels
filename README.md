@@ -110,6 +110,7 @@ Below is the current support status for the keywords defined in [Section 6 (A Vo
 | `exclusiveMaximum` | 6.2.3 | Numeric Instances | ✅ |
 | `minimum` | 6.2.4 | Numeric Instances | ✅ |
 | `exclusiveMinimum` | 6.2.5 | Numeric Instances | ✅ |
+| `format` | 7.3 | String Instances | (partial) |
 | `maxLength` | 6.3.1 | String Instances | ✅ |
 | `minLength` | 6.3.2 | String Instances | ✅ |
 | `pattern` | 6.3.3 | String Instances | ❌ |
