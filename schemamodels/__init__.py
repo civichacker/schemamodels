@@ -396,6 +396,12 @@ class SchemaModelFactoryV2(SchemaModelFactory):
                     "not",
                     "allOf",
                     "oneOf",
+                    "minItems",
+                    "maxItems",
+                    "uniqueItems",
+                    "contains",
+                    "minContains",
+                    "maxContains",
                 ):
                     if guard in v:
                         field_meta[guard] = v[guard]
@@ -421,6 +427,12 @@ class SchemaModelFactoryV2(SchemaModelFactory):
                     "not",
                     "anyOf",
                     "oneOf",
+                    "minItems",
+                    "maxItems",
+                    "uniqueItems",
+                    "contains",
+                    "minContains",
+                    "maxContains",
                 ):
                     if guard in v:
                         field_meta[guard] = v[guard]
@@ -446,6 +458,12 @@ class SchemaModelFactoryV2(SchemaModelFactory):
                     "not",
                     "anyOf",
                     "allOf",
+                    "minItems",
+                    "maxItems",
+                    "uniqueItems",
+                    "contains",
+                    "minContains",
+                    "maxContains",
                 ):
                     if guard in v:
                         field_meta[guard] = v[guard]
@@ -465,6 +483,12 @@ class SchemaModelFactoryV2(SchemaModelFactory):
                     "anyOf",
                     "allOf",
                     "oneOf",
+                    "minItems",
+                    "maxItems",
+                    "uniqueItems",
+                    "contains",
+                    "minContains",
+                    "maxContains",
                 ):
                     if guard in v:
                         field_meta[guard] = v[guard]
@@ -486,6 +510,12 @@ class SchemaModelFactoryV2(SchemaModelFactory):
                     "anyOf",
                     "allOf",
                     "oneOf",
+                    "minItems",
+                    "maxItems",
+                    "uniqueItems",
+                    "contains",
+                    "minContains",
+                    "maxContains",
                 ):
                     if guard in v:
                         field_meta[guard] = v[guard]

@@ -297,6 +297,390 @@ def test_array_descriptor():
 
 @pytest.mark.v2
 @pytest.mark.descriptor
+def test_array_descriptor_min_items():
+    MinItemsSchema = make_dataclass(
+        "MinItemsSchema",
+        [
+            (
+                "items",
+                bases.ArrayDescriptor,
+                bases.ArrayDescriptor(metadata={"minItems": 2}),
+            )
+        ],
+    )
+
+    s1 = MinItemsSchema(items=[1, 2])
+    assert s1.items == [1, 2]
+    s2 = MinItemsSchema(items=["a", "b", "c"])
+    assert s2.items == ["a", "b", "c"]
+    s3 = MinItemsSchema(items=(1, 2, 3))
+    assert s3.items == (1, 2, 3)
+
+    with pytest.raises(e.LengthConstraintViolation):
+        MinItemsSchema(items=[])
+
+    with pytest.raises(e.LengthConstraintViolation):
+        MinItemsSchema(items=[1])
+
+    with pytest.raises(e.LengthConstraintViolation):
+        MinItemsSchema(items=("only_one",))
+
+    # minItems = 0
+    ZeroMinSchema = make_dataclass(
+        "ZeroMinSchema",
+        [
+            (
+                "items",
+                bases.ArrayDescriptor,
+                bases.ArrayDescriptor(metadata={"minItems": 0}),
+            )
+        ],
+    )
+    assert ZeroMinSchema(items=[]).items == []
+
+
+@pytest.mark.v2
+@pytest.mark.descriptor
+def test_array_descriptor_max_items():
+    MaxItemsSchema = make_dataclass(
+        "MaxItemsSchema",
+        [
+            (
+                "items",
+                bases.ArrayDescriptor,
+                bases.ArrayDescriptor(metadata={"maxItems": 3}),
+            )
+        ],
+    )
+
+    assert MaxItemsSchema(items=[]).items == []
+    assert MaxItemsSchema(items=[1]).items == [1]
+    assert MaxItemsSchema(items=[1, 2, 3]).items == [1, 2, 3]
+    assert MaxItemsSchema(items=(1, 2)).items == (1, 2)
+
+    with pytest.raises(e.LengthConstraintViolation):
+        MaxItemsSchema(items=[1, 2, 3, 4])
+
+    with pytest.raises(e.LengthConstraintViolation):
+        MaxItemsSchema(items=(1, 2, 3, 4, 5))
+
+
+@pytest.mark.v2
+@pytest.mark.descriptor
+def test_array_descriptor_min_and_max_items():
+    BoundedArraySchema = make_dataclass(
+        "BoundedArraySchema",
+        [
+            (
+                "items",
+                bases.ArrayDescriptor,
+                bases.ArrayDescriptor(metadata={"minItems": 2, "maxItems": 4}),
+            )
+        ],
+    )
+
+    assert BoundedArraySchema(items=[1, 2]).items == [1, 2]
+    assert BoundedArraySchema(items=[1, 2, 3]).items == [1, 2, 3]
+    assert BoundedArraySchema(items=[1, 2, 3, 4]).items == [1, 2, 3, 4]
+
+    with pytest.raises(e.LengthConstraintViolation):
+        BoundedArraySchema(items=[1])
+
+    with pytest.raises(e.LengthConstraintViolation):
+        BoundedArraySchema(items=[1, 2, 3, 4, 5])
+
+
+@pytest.mark.v2
+@pytest.mark.descriptor
+def test_array_descriptor_unique_items():
+    UniqueSchema = make_dataclass(
+        "UniqueSchema",
+        [
+            (
+                "items",
+                bases.ArrayDescriptor,
+                bases.ArrayDescriptor(metadata={"uniqueItems": True}),
+            )
+        ],
+    )
+
+    assert UniqueSchema(items=[]).items == []
+    assert UniqueSchema(items=[1]).items == [1]
+    assert UniqueSchema(items=[1, 2, 3]).items == [1, 2, 3]
+    assert UniqueSchema(items=["a", "b", "c"]).items == ["a", "b", "c"]
+    assert UniqueSchema(items=[{"a": 1}, {"a": 2}]).items == [{"a": 1}, {"a": 2}]
+    assert UniqueSchema(items=[[1, 2], [1, 3]]).items == [[1, 2], [1, 3]]
+    # JSON Schema type distinction: integer 1 vs boolean True, integer 0 vs boolean False
+    assert UniqueSchema(items=[1, True]).items == [1, True]
+    assert UniqueSchema(items=[0, False]).items == [0, False]
+    assert UniqueSchema(items=[[1, True], [1, 1]]).items == [[1, True], [1, 1]]
+
+    with pytest.raises(e.LengthConstraintViolation):
+        UniqueSchema(items=[1, 1])
+
+    with pytest.raises(e.LengthConstraintViolation):
+        UniqueSchema(items=[1, 1.0])
+
+    with pytest.raises(e.LengthConstraintViolation):
+        UniqueSchema(items=[1, 2, 3, 1])
+
+    with pytest.raises(e.LengthConstraintViolation):
+        UniqueSchema(items=["foo", "bar", "foo"])
+
+    with pytest.raises(e.LengthConstraintViolation):
+        UniqueSchema(items=[{"a": 1}, {"a": 1}])
+
+    with pytest.raises(e.LengthConstraintViolation):
+        UniqueSchema(items=[{"a": 1, "b": 2}, {"b": 2, "a": 1}])
+
+    with pytest.raises(e.LengthConstraintViolation):
+        UniqueSchema(items=[[1, 2], [1, 2]])
+
+    with pytest.raises(e.LengthConstraintViolation):
+        UniqueSchema(items=[[1, True], [1, True]])
+
+    # uniqueItems = False allows duplicates
+    NonUniqueSchema = make_dataclass(
+        "NonUniqueSchema",
+        [
+            (
+                "items",
+                bases.ArrayDescriptor,
+                bases.ArrayDescriptor(metadata={"uniqueItems": False}),
+            )
+        ],
+    )
+    assert NonUniqueSchema(items=[1, 1, 1]).items == [1, 1, 1]
+
+
+@pytest.mark.v2
+@pytest.mark.descriptor
+def test_array_descriptor_min_max_contains():
+    # minContains and maxContains with contains schema
+    ContainsSchema = make_dataclass(
+        "ContainsSchema",
+        [
+            (
+                "items",
+                bases.ArrayDescriptor,
+                bases.ArrayDescriptor(
+                    metadata={
+                        "contains": {"type": "number"},
+                        "minContains": 2,
+                        "maxContains": 3,
+                    }
+                ),
+            )
+        ],
+    )
+
+    # Valid: 2 or 3 numbers
+    assert ContainsSchema(items=["a", 1, 2]).items == ["a", 1, 2]
+    assert ContainsSchema(items=[1, 2, 3]).items == [1, 2, 3]
+    assert ContainsSchema(items=["x", "y", 10, 20]).items == ["x", "y", 10, 20]
+
+    # Less than minContains (2)
+    with pytest.raises(e.LengthConstraintViolation):
+        ContainsSchema(items=["a", "b", "c"])
+
+    with pytest.raises(e.LengthConstraintViolation):
+        ContainsSchema(items=["a", 1, "b"])
+
+    # More than maxContains (3)
+    with pytest.raises(e.LengthConstraintViolation):
+        ContainsSchema(items=[1, 2, 3, 4])
+
+    with pytest.raises(e.LengthConstraintViolation):
+        ContainsSchema(items=[1, 2, 3, 4, "a"])
+
+    # contains without minContains defaults to minContains=1
+    DefaultContainsSchema = make_dataclass(
+        "DefaultContainsSchema",
+        [
+            (
+                "items",
+                bases.ArrayDescriptor,
+                bases.ArrayDescriptor(
+                    metadata={"contains": {"type": "string"}}
+                ),
+            )
+        ],
+    )
+    assert DefaultContainsSchema(items=[1, 2, "hello"]).items == [1, 2, "hello"]
+    with pytest.raises(e.LengthConstraintViolation):
+        DefaultContainsSchema(items=[1, 2, 3])
+
+    # only maxContains specified
+    MaxContainsSchema = make_dataclass(
+        "MaxContainsSchema",
+        [
+            (
+                "items",
+                bases.ArrayDescriptor,
+                bases.ArrayDescriptor(
+                    metadata={
+                        "contains": {"type": "string"},
+                        "maxContains": 1,
+                        "minContains": 0,
+                    }
+                ),
+            )
+        ],
+    )
+    assert MaxContainsSchema(items=[1, 2, 3]).items == [1, 2, 3]
+    assert MaxContainsSchema(items=[1, "a", 2]).items == [1, "a", 2]
+    with pytest.raises(e.LengthConstraintViolation):
+        MaxContainsSchema(items=["a", "b", 1])
+
+    # minContains: 0 with contains allows 0 matches and empty array
+    ZeroMinContainsSchema = make_dataclass(
+        "ZeroMinContainsSchema",
+        [
+            (
+                "items",
+                bases.ArrayDescriptor,
+                bases.ArrayDescriptor(
+                    metadata={
+                        "contains": {"type": "number"},
+                        "minContains": 0,
+                    }
+                ),
+            )
+        ],
+    )
+    assert ZeroMinContainsSchema(items=[]).items == []
+    assert ZeroMinContainsSchema(items=["a", "b", "c"]).items == ["a", "b", "c"]
+    assert ZeroMinContainsSchema(items=[1, 2]).items == [1, 2]
+
+    # minContains or maxContains without contains has no effect
+    NoContainsSchema = make_dataclass(
+        "NoContainsSchema",
+        [
+            (
+                "items",
+                bases.ArrayDescriptor,
+                bases.ArrayDescriptor(
+                    metadata={
+                        "minContains": 5,
+                        "maxContains": 1,
+                    }
+                ),
+            )
+        ],
+    )
+    assert NoContainsSchema(items=[1, 2]).items == [1, 2]
+    assert NoContainsSchema(items=[]).items == []
+
+    # boolean subschemas for contains
+    BoolContainsSchema = make_dataclass(
+        "BoolContainsSchema",
+        [
+            (
+                "items",
+                bases.ArrayDescriptor,
+                bases.ArrayDescriptor(
+                    metadata={
+                        "contains": True,
+                        "minContains": 2,
+                    }
+                ),
+            )
+        ],
+    )
+    assert BoolContainsSchema(items=["a", 1]).items == ["a", 1]
+    with pytest.raises(e.LengthConstraintViolation):
+        BoolContainsSchema(items=["only_one"])
+
+
+@pytest.mark.v2
+@pytest.mark.descriptor
+def test_array_descriptor_comparisons_direct():
+    # Test each comparator directly from ArrayDescriptor.COMPARISONS
+    min_items_cmp = bases.ArrayDescriptor.COMPARISONS["minItems"]["comparator"](2)
+    assert min_items_cmp([1, 2]) is True
+    assert min_items_cmp([1, 2, 3]) is True
+    assert min_items_cmp([1]) is False
+    assert min_items_cmp([]) is False
+
+    max_items_cmp = bases.ArrayDescriptor.COMPARISONS["maxItems"]["comparator"](2)
+    assert max_items_cmp([]) is True
+    assert max_items_cmp([1, 2]) is True
+    assert max_items_cmp([1, 2, 3]) is False
+
+    unique_items_cmp = bases.ArrayDescriptor.COMPARISONS["uniqueItems"]["comparator"](True)
+    assert unique_items_cmp([1, 2, 3]) is True
+    assert unique_items_cmp([]) is True
+    assert unique_items_cmp([1, 1]) is False
+    assert unique_items_cmp([{"a": 1}, {"a": 1}]) is False
+    assert unique_items_cmp([{"a": 1}, {"a": 2}]) is True
+
+    non_unique_cmp = bases.ArrayDescriptor.COMPARISONS["uniqueItems"]["comparator"](False)
+    assert non_unique_cmp([1, 1]) is True
+
+    min_contains_cmp = bases.ArrayDescriptor.COMPARISONS["minContains"]["comparator"](2)
+    assert min_contains_cmp([1, 2, 3], contains={"type": "number"}) is True
+    assert min_contains_cmp(["a", 1], contains={"type": "number"}) is False
+
+    max_contains_cmp = bases.ArrayDescriptor.COMPARISONS["maxContains"]["comparator"](2)
+    assert max_contains_cmp([1, 2], contains={"type": "number"}) is True
+    assert max_contains_cmp([1, 2, 3], contains={"type": "number"}) is False
+
+
+@pytest.mark.v2
+@pytest.mark.descriptor
+def test_schema_model_factory_v2_array_keywords():
+    schema = {
+        "title": "array-keywords-schema",
+        "type": "object",
+        "properties": {
+            "tags": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 4,
+                "uniqueItems": True,
+            },
+            "scores": {
+                "type": "array",
+                "contains": {"type": "number"},
+                "minContains": 1,
+                "maxContains": 2,
+            },
+        },
+    }
+
+    SchemaModelFactoryV2(schemas=[schema])
+    from schemamodels.dynamic import ArrayKeywordsSchema
+
+    valid_instance = ArrayKeywordsSchema(
+        tags=["python", "pytest"],
+        scores=["initial", 95],
+    )
+    assert valid_instance.tags == ["python", "pytest"]
+    assert valid_instance.scores == ["initial", 95]
+
+    # tags minItems violation
+    with pytest.raises(e.LengthConstraintViolation):
+        ArrayKeywordsSchema(tags=["python"], scores=[95])
+
+    # tags maxItems violation
+    with pytest.raises(e.LengthConstraintViolation):
+        ArrayKeywordsSchema(tags=["a", "b", "c", "d", "e"], scores=[95])
+
+    # tags uniqueItems violation
+    with pytest.raises(e.LengthConstraintViolation):
+        ArrayKeywordsSchema(tags=["python", "python"], scores=[95])
+
+    # scores minContains violation
+    with pytest.raises(e.LengthConstraintViolation):
+        ArrayKeywordsSchema(tags=["python", "pytest"], scores=["a", "b"])
+
+    # scores maxContains violation
+    with pytest.raises(e.LengthConstraintViolation):
+        ArrayKeywordsSchema(tags=["python", "pytest"], scores=[10, 20, 30])
+
+
+@pytest.mark.v2
+@pytest.mark.descriptor
 def test_object_descriptor():
     ObjSchema = make_dataclass(
         "ObjSchema", [("payload", bases.ObjectDescriptor, bases.ObjectDescriptor())]
@@ -795,7 +1179,13 @@ def test_all_descriptors_comparisons():
         "maxLength",
         "minLength",
     }
-    assert v2.ArrayDescriptor.COMPARISONS == {}
+    assert set(v2.ArrayDescriptor.COMPARISONS.keys()) == {
+        "maxItems",
+        "minItems",
+        "maxContains",
+        "minContains",
+        "uniqueItems",
+    }
     assert v2.BooleanDescriptor.COMPARISONS == {}
     assert v2.ObjectDescriptor.COMPARISONS == {}
     assert v2.NullDescriptor.COMPARISONS == {}
