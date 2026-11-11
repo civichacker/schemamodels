@@ -32,3 +32,15 @@ class SubSchemaFailureViolation(SchemaViolation):
 
 class StringFormatViolation(SchemaViolation):
     pass
+
+
+class ArrayElementViolation(SchemaViolation):
+    pass
+
+
+class ArrayLengthViolation(SchemaViolation):
+    pass
+
+
+class ArrayUniqueElementViolation(SchemaViolation):
+    pass

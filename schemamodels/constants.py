@@ -9,7 +9,7 @@ from operator import contains, ge, gt, le, lt, mod, not_
 from urllib.parse import urlparse
 
 from schemamodels import exceptions
-from schemamodels.utils import ifraises, raise_on_none
+from schemamodels.utils import _are_items_unique, ifraises, raise_on_none, validate_subschema
 
 REQUIRED_MISSING = object()
 
@@ -79,6 +79,32 @@ COMPARISONS = {
     "maxLength": lambda d: partial(lambda bound, v: len(v) <= bound, d),
     "minLength": lambda d: partial(lambda bound, v: len(v) >= bound, d),
     "multipleOf": lambda d: partial(lambda d, n: mod(n, d) == 0, d),
+    "maxItems": lambda d: partial(
+        lambda bound, v: 0 <= len(v) <= bound if isinstance(v, (list, tuple)) else True,
+        d,
+    ),
+    "minItems": lambda d: partial(
+        lambda bound, v: 0 <= bound <= len(v) if isinstance(v, (list, tuple)) else True,
+        d,
+    ),
+    "uniqueItems": lambda d: partial(
+        lambda unique, v: (
+            _are_items_unique(v) if unique else True
+        )
+        if isinstance(v, (list, tuple))
+        else True,
+        d,
+    ),
+    "contains": lambda d: partial(
+        lambda subschema, v: (
+            any(validate_subschema(subschema, item) for item in v)
+            if isinstance(v, (list, tuple))
+            else True
+        ),
+        d,
+    ),
+    "minContains": lambda d: (lambda v: True),
+    "maxContains": lambda d: (lambda v: True),
 }
 
 STRING_FORMATS = {

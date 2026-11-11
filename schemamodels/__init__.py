@@ -52,13 +52,22 @@ class DefaultErrorHandler(bases.BaseErrorHandler):
         "allOf": (e.SubSchemaFailureViolation, "at least one subschema failed"),
         "type": (e.ValueTypeViolation, "incorrect type assigned to JSON property"),
         "enum": (e.ValueTypeViolation, "string property much use declared enum values"),
-        "maximum": (e.RangeConstraintViolation, "violates range contraint"),
-        "exclusiveMaximum": (e.RangeConstraintViolation, "violates range contraint"),
-        "exclusiveMinimum": (e.RangeConstraintViolation, "violates range contraint"),
-        "minimum": (e.RangeConstraintViolation, "violates range contraint"),
-        "multipleOf": (e.RangeConstraintViolation, "violates range contraint"),
-        "maxLength": (e.LengthConstraintViolation, "violates length contraint"),
-        "minLength": (e.LengthConstraintViolation, "violates length contraint"),
+        "maximum": (e.RangeConstraintViolation, "violates range constraint"),
+        "exclusiveMaximum": (e.RangeConstraintViolation, "violates range constraint"),
+        "exclusiveMinimum": (e.RangeConstraintViolation, "violates range constraint"),
+        "minimum": (e.RangeConstraintViolation, "violates range constraint"),
+        "multipleOf": (e.RangeConstraintViolation, "violates range constraint"),
+        "maxLength": (e.LengthConstraintViolation, "violates length constraint"),
+        "minLength": (e.LengthConstraintViolation, "violates length constraint"),
+        "maxItems": (e.ArrayLengthViolation, "violates array length constraint"),
+        "minItems": (e.ArrayLengthViolation, "violates array length constraint"),
+        "uniqueItems": (
+            e.ArrayUniqueElementViolation,
+            "violates array unique element constraint",
+        ),
+        "contains": (e.ArrayElementViolation, "violates array element constraint"),
+        "minContains": (e.ArrayElementViolation, "violates array element constraint"),
+        "maxContains": (e.ArrayElementViolation, "violates array element constraint"),
     }
 
     @classmethod
@@ -105,6 +114,24 @@ class DefaultRenderer(bases.BaseRenderer):
 
 def generate_functors(struct):
     o = {k: COMPARISONS[k](v) for k, v in struct.items() if k not in PORCELINE_KEYWORDS}
+    if "contains" in struct:
+        contains_sub = struct["contains"]
+        min_c = struct.get("minContains", 1)
+        max_c = struct.get("maxContains")
+
+        def _contains_check(v):
+            if not isinstance(v, (list, tuple)):
+                return True
+            matches = sum(
+                1 for item in v if utils.validate_subschema(contains_sub, item)
+            )
+            if matches < min_c:
+                return False
+            if max_c is not None and matches > max_c:
+                return False
+            return True
+
+        o["contains"] = _contains_check
     return bases.CoreModel(o)
 
 

@@ -316,13 +316,13 @@ def test_array_descriptor_min_items():
     s3 = MinItemsSchema(items=(1, 2, 3))
     assert s3.items == (1, 2, 3)
 
-    with pytest.raises(e.LengthConstraintViolation):
+    with pytest.raises(e.ArrayLengthViolation):
         MinItemsSchema(items=[])
 
-    with pytest.raises(e.LengthConstraintViolation):
+    with pytest.raises(e.ArrayLengthViolation):
         MinItemsSchema(items=[1])
 
-    with pytest.raises(e.LengthConstraintViolation):
+    with pytest.raises(e.ArrayLengthViolation):
         MinItemsSchema(items=("only_one",))
 
     # minItems = 0
@@ -358,10 +358,10 @@ def test_array_descriptor_max_items():
     assert MaxItemsSchema(items=[1, 2, 3]).items == [1, 2, 3]
     assert MaxItemsSchema(items=(1, 2)).items == (1, 2)
 
-    with pytest.raises(e.LengthConstraintViolation):
+    with pytest.raises(e.ArrayLengthViolation):
         MaxItemsSchema(items=[1, 2, 3, 4])
 
-    with pytest.raises(e.LengthConstraintViolation):
+    with pytest.raises(e.ArrayLengthViolation):
         MaxItemsSchema(items=(1, 2, 3, 4, 5))
 
 
@@ -383,10 +383,10 @@ def test_array_descriptor_min_and_max_items():
     assert BoundedArraySchema(items=[1, 2, 3]).items == [1, 2, 3]
     assert BoundedArraySchema(items=[1, 2, 3, 4]).items == [1, 2, 3, 4]
 
-    with pytest.raises(e.LengthConstraintViolation):
+    with pytest.raises(e.ArrayLengthViolation):
         BoundedArraySchema(items=[1])
 
-    with pytest.raises(e.LengthConstraintViolation):
+    with pytest.raises(e.ArrayLengthViolation):
         BoundedArraySchema(items=[1, 2, 3, 4, 5])
 
 
@@ -415,28 +415,28 @@ def test_array_descriptor_unique_items():
     assert UniqueSchema(items=[0, False]).items == [0, False]
     assert UniqueSchema(items=[[1, True], [1, 1]]).items == [[1, True], [1, 1]]
 
-    with pytest.raises(e.LengthConstraintViolation):
+    with pytest.raises(e.ArrayUniqueElementViolation):
         UniqueSchema(items=[1, 1])
 
-    with pytest.raises(e.LengthConstraintViolation):
+    with pytest.raises(e.ArrayUniqueElementViolation):
         UniqueSchema(items=[1, 1.0])
 
-    with pytest.raises(e.LengthConstraintViolation):
+    with pytest.raises(e.ArrayUniqueElementViolation):
         UniqueSchema(items=[1, 2, 3, 1])
 
-    with pytest.raises(e.LengthConstraintViolation):
+    with pytest.raises(e.ArrayUniqueElementViolation):
         UniqueSchema(items=["foo", "bar", "foo"])
 
-    with pytest.raises(e.LengthConstraintViolation):
+    with pytest.raises(e.ArrayUniqueElementViolation):
         UniqueSchema(items=[{"a": 1}, {"a": 1}])
 
-    with pytest.raises(e.LengthConstraintViolation):
+    with pytest.raises(e.ArrayUniqueElementViolation):
         UniqueSchema(items=[{"a": 1, "b": 2}, {"b": 2, "a": 1}])
 
-    with pytest.raises(e.LengthConstraintViolation):
+    with pytest.raises(e.ArrayUniqueElementViolation):
         UniqueSchema(items=[[1, 2], [1, 2]])
 
-    with pytest.raises(e.LengthConstraintViolation):
+    with pytest.raises(e.ArrayUniqueElementViolation):
         UniqueSchema(items=[[1, True], [1, True]])
 
     # uniqueItems = False allows duplicates
@@ -480,17 +480,17 @@ def test_array_descriptor_min_max_contains():
     assert ContainsSchema(items=["x", "y", 10, 20]).items == ["x", "y", 10, 20]
 
     # Less than minContains (2)
-    with pytest.raises(e.LengthConstraintViolation):
+    with pytest.raises(e.ArrayElementViolation):
         ContainsSchema(items=["a", "b", "c"])
 
-    with pytest.raises(e.LengthConstraintViolation):
+    with pytest.raises(e.ArrayElementViolation):
         ContainsSchema(items=["a", 1, "b"])
 
     # More than maxContains (3)
-    with pytest.raises(e.LengthConstraintViolation):
+    with pytest.raises(e.ArrayElementViolation):
         ContainsSchema(items=[1, 2, 3, 4])
 
-    with pytest.raises(e.LengthConstraintViolation):
+    with pytest.raises(e.ArrayElementViolation):
         ContainsSchema(items=[1, 2, 3, 4, "a"])
 
     # contains without minContains defaults to minContains=1
@@ -507,7 +507,7 @@ def test_array_descriptor_min_max_contains():
         ],
     )
     assert DefaultContainsSchema(items=[1, 2, "hello"]).items == [1, 2, "hello"]
-    with pytest.raises(e.LengthConstraintViolation):
+    with pytest.raises(e.ArrayElementViolation):
         DefaultContainsSchema(items=[1, 2, 3])
 
     # only maxContains specified
@@ -529,7 +529,7 @@ def test_array_descriptor_min_max_contains():
     )
     assert MaxContainsSchema(items=[1, 2, 3]).items == [1, 2, 3]
     assert MaxContainsSchema(items=[1, "a", 2]).items == [1, "a", 2]
-    with pytest.raises(e.LengthConstraintViolation):
+    with pytest.raises(e.ArrayElementViolation):
         MaxContainsSchema(items=["a", "b", 1])
 
     # minContains: 0 with contains allows 0 matches and empty array
@@ -588,7 +588,7 @@ def test_array_descriptor_min_max_contains():
         ],
     )
     assert BoolContainsSchema(items=["a", 1]).items == ["a", 1]
-    with pytest.raises(e.LengthConstraintViolation):
+    with pytest.raises(e.ArrayElementViolation):
         BoolContainsSchema(items=["only_one"])
 
 
@@ -659,23 +659,23 @@ def test_schema_model_factory_v2_array_keywords():
     assert valid_instance.scores == ["initial", 95]
 
     # tags minItems violation
-    with pytest.raises(e.LengthConstraintViolation):
+    with pytest.raises(e.ArrayLengthViolation):
         ArrayKeywordsSchema(tags=["python"], scores=[95])
 
     # tags maxItems violation
-    with pytest.raises(e.LengthConstraintViolation):
+    with pytest.raises(e.ArrayLengthViolation):
         ArrayKeywordsSchema(tags=["a", "b", "c", "d", "e"], scores=[95])
 
     # tags uniqueItems violation
-    with pytest.raises(e.LengthConstraintViolation):
+    with pytest.raises(e.ArrayUniqueElementViolation):
         ArrayKeywordsSchema(tags=["python", "python"], scores=[95])
 
     # scores minContains violation
-    with pytest.raises(e.LengthConstraintViolation):
+    with pytest.raises(e.ArrayElementViolation):
         ArrayKeywordsSchema(tags=["python", "pytest"], scores=["a", "b"])
 
     # scores maxContains violation
-    with pytest.raises(e.LengthConstraintViolation):
+    with pytest.raises(e.ArrayElementViolation):
         ArrayKeywordsSchema(tags=["python", "pytest"], scores=[10, 20, 30])
 
 

@@ -251,11 +251,11 @@ class ArrayDescriptor(JSONSchemaFieldDescriptor[C]):
     COMPARISONS: ClassVar[dict] = {
         'maxItems': {
             "comparator": lambda d: partial(lambda bound, v: 0 <= len(v) <= bound, d),
-            "errorClass": e.LengthConstraintViolation,
+            "errorClass": e.ArrayLengthViolation,
         },
         'minItems': {
             "comparator": lambda d: partial(lambda bound, v: 0 <= bound <= len(v), d),
-            "errorClass": e.LengthConstraintViolation,
+            "errorClass": e.ArrayLengthViolation,
         },
         'maxContains': {
             "comparator": lambda d: partial(
@@ -273,7 +273,7 @@ class ArrayDescriptor(JSONSchemaFieldDescriptor[C]):
                 ),
                 d,
             ),
-            "errorClass": e.LengthConstraintViolation,
+            "errorClass": e.ArrayElementViolation,
         },
         'minContains': {
             "comparator": lambda d: partial(
@@ -291,13 +291,13 @@ class ArrayDescriptor(JSONSchemaFieldDescriptor[C]):
                 ),
                 d,
             ),
-            "errorClass": e.LengthConstraintViolation,
+            "errorClass": e.ArrayElementViolation,
         },
         'uniqueItems': {
             "comparator": lambda d: partial(
                 lambda unique, v: (_are_items_unique(v) if unique else True), d
             ),
-            "errorClass": e.LengthConstraintViolation,
+            "errorClass": e.ArrayUniqueElementViolation,
         },
     }
 
