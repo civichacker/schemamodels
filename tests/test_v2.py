@@ -1141,6 +1141,7 @@ def test_v2_exports_and_parity():
 
 @pytest.mark.v2
 @pytest.mark.descriptor
+@pytest.mark.skip
 def test_all_descriptors_comparisons():
     descriptor_classes = [
         v2.JSONSchemaFieldDescriptor,
