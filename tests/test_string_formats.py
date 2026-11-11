@@ -213,12 +213,8 @@ def test_string_uri_format_support(Factory):
     InternetFormat(resource_uri="news:comp.infosystems.www.servers.unix")
     InternetFormat(resource_uri="tel:+1-816-555-1212")
     InternetFormat(resource_uri="telnet://192.0.2.16:80/")
-    InternetFormat(
-        resource_uri="urn:oasis:names:specification:docbook:dtd:xml:4.1.2"
-    )
-    InternetFormat(
-        resource_uri="urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6"
-    )
+    InternetFormat(resource_uri="urn:oasis:names:specification:docbook:dtd:xml:4.1.2")
+    InternetFormat(resource_uri="urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6")
     with pytest.raises(exceptions.StringFormatViolation):
         InternetFormat(resource_uri="abcdefgh")
         InternetFormat(resource_uri="//example.com/relative")
@@ -252,9 +248,7 @@ def test_string_uri_reference_format_support(Factory):
     # Full URIs are valid URI references (RFC 3986 section 4.1: URI-reference = URI / relative-ref)
     UriReferenceFormat(resource_ref="ftp://ftp.is.co.za/rfc/rfc1808.txt")
     UriReferenceFormat(resource_ref="http://www.ietf.org/rfc/rfc2396.txt")
-    UriReferenceFormat(
-        resource_ref="ldap://[2001:db8::7]/c=GB?objectClass?one"
-    )
+    UriReferenceFormat(resource_ref="ldap://[2001:db8::7]/c=GB?objectClass?one")
     UriReferenceFormat(resource_ref="mailto:John.Doe@example.com")
     UriReferenceFormat(
         resource_ref="urn:oasis:names:specification:docbook:dtd:xml:4.1.2"
@@ -306,9 +300,7 @@ def test_string_iri_format_support(Factory):
     IriFormat(resource_iri="news:comp.infosystems.www.servers.unix")
     IriFormat(resource_iri="tel:+1-816-555-1212")
     IriFormat(resource_iri="telnet://192.0.2.16:80/")
-    IriFormat(
-        resource_iri="urn:oasis:names:specification:docbook:dtd:xml:4.1.2"
-    )
+    IriFormat(resource_iri="urn:oasis:names:specification:docbook:dtd:xml:4.1.2")
     IriFormat(resource_iri="urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6")
     # Internationalized Resource Identifiers with Unicode / UCS characters
     IriFormat(resource_iri="https://en.wiktionary.org/wiki/Ῥόδος")
@@ -404,10 +396,104 @@ def test_string_uuid_format_support(Factory):
 
     # UUIDs in URNs and malformed UUID strings must fail
     with pytest.raises(exceptions.StringFormatViolation):
-        UuidFormat(
-            resource_uuid="urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6"
-        )
+        UuidFormat(resource_uuid="urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6")
         UuidFormat(resource_uuid="f81d4fae7dec11d0a76500a0c91e6bf6")
         UuidFormat(resource_uuid="f81d4fae-7dec-11d0-a765-00a0c91e6bfg")
         UuidFormat(resource_uuid="f81d4fae-7dec-11d0-a765")
         UuidFormat(resource_uuid="abcdefgh")
+
+
+@pytest.mark.string
+@pytest.mark.format
+def test_string_duration_format_support(Factory):
+    schemadoc = """
+    {
+        "title": "duration-format",
+        "description": "Duration format validation per RFC 3339 Appendix A / ISO 8601",
+        "type": "object",
+        "properties": {
+            "time_duration": {
+              "type": "string",
+              "format": "duration"
+            }
+        }
+    }
+    """
+    stringformat = json.loads(schemadoc)
+    sm = Factory()
+    sm.register(stringformat)
+
+    from schemamodels.dynamic import DurationFormat
+
+    # Valid Durations per RFC 3339 Appendix A:
+    # 1. Date durations (years, months, days)
+    DurationFormat(time_duration="P3Y")
+    DurationFormat(time_duration="P2M")
+    DurationFormat(time_duration="P4D")
+    DurationFormat(time_duration="P1Y2M")
+    DurationFormat(time_duration="P1Y2M3D")
+    DurationFormat(time_duration="P2M3D")
+    DurationFormat(time_duration="P100Y10M20D")
+
+    # 2. Week durations
+    DurationFormat(time_duration="P1W")
+    DurationFormat(time_duration="P4W")
+    DurationFormat(time_duration="P52W")
+
+    # 3. Time durations (hours, minutes, seconds)
+    DurationFormat(time_duration="PT12H")
+    DurationFormat(time_duration="PT30M")
+    DurationFormat(time_duration="PT5S")
+    DurationFormat(time_duration="PT12H30M")
+    DurationFormat(time_duration="PT12H30M5S")
+    DurationFormat(time_duration="PT30M5S")
+
+    # 4. Combined Date and Time durations
+    DurationFormat(time_duration="P3Y6M4DT12H30M5S")
+    DurationFormat(time_duration="P1YT1H")
+    DurationFormat(time_duration="P2MT2M")
+    DurationFormat(time_duration="P3DT3S")
+    DurationFormat(time_duration="P1Y2MT1H2M")
+    DurationFormat(time_duration="P2M3DT4H5M6S")
+    DurationFormat(time_duration="P1Y2M3DT1H")
+    DurationFormat(time_duration="P1Y2M3DT1M")
+    DurationFormat(time_duration="P1Y2M3DT1S")
+
+    # Invalid Durations
+    invalid_durations = [
+        "",
+        "P",
+        "PT",
+        "P1",
+        "PT1",
+        "1Y",
+        "T1H",
+        "P1Y1D",  # Day cannot follow year directly without month
+        "P3Y4D",
+        "PT1H1S",  # Second cannot follow hour directly without minute
+        "PT12H5S",
+        "P1W1D",  # Week cannot be combined with day
+        "P1WT1H",  # Week cannot be combined with time
+        "P1Y2W",  # Week cannot follow year
+        "P1Y2M3D4W",
+        "P-1Y",  # Negative numbers not permitted
+        "P1.5Y",  # Fractional numbers not permitted
+        "P1,5Y",
+        "p1y",  # Lowercase not permitted
+        "pt1h",
+        "P1H",  # Time units require "T" prefix
+        "P1S",
+        "P1H2M",
+        "P1M1Y",  # Wrong order
+        "P1D1M",
+        "PT1M1H",
+        "PT1S1M",
+        "abcdefgh",
+        "2020-01-01",
+        "P1Y ",
+        " P1Y",
+    ]
+
+    for invalid in invalid_durations:
+        with pytest.raises(exceptions.StringFormatViolation):
+            DurationFormat(time_duration=invalid)

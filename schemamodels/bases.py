@@ -72,7 +72,34 @@ O = TypeVar("O", bound=dict)  # noqa: E741
 B = TypeVar("B", bound=bool)
 
 
-def validate_subschema(subschema: dict, value: Any) -> bool:  # noqa: C901
+def _json_equal(a: Any, b: Any) -> bool:
+    if type(a) is not type(b):
+        if (
+            isinstance(a, (int, float))
+            and isinstance(b, (int, float))
+            and not isinstance(a, bool)
+            and not isinstance(b, bool)
+        ):
+            return a == b
+        return False
+    if isinstance(a, (list, tuple)):
+        return len(a) == len(b) and all(_json_equal(x, y) for x, y in zip(a, b))
+    if isinstance(a, dict):
+        return a.keys() == b.keys() and all(_json_equal(a[k], b[k]) for k in a)
+    return a == b
+
+
+def _are_items_unique(v) -> bool:
+    for i in range(len(v)):
+        for j in range(i + 1, len(v)):
+            if _json_equal(v[i], v[j]):
+                return False
+    return True
+
+
+def validate_subschema(subschema: dict | bool, value: Any) -> bool:  # noqa: C901
+    if isinstance(subschema, bool):
+        return subschema
     if not isinstance(subschema, dict):
         return True
     if "type" in subschema:
@@ -93,21 +120,56 @@ def validate_subschema(subschema: dict, value: Any) -> bool:  # noqa: C901
             return False
         if t == "null" and value is not None:
             return False
-    if "minimum" in subschema and not (value >= subschema["minimum"]):
+    if (
+        "minimum" in subschema
+        and isinstance(value, (int, float))
+        and type(value) is not bool
+        and not (value >= subschema["minimum"])
+    ):
         return False
-    if "maximum" in subschema and not (value <= subschema["maximum"]):
+    if (
+        "maximum" in subschema
+        and isinstance(value, (int, float))
+        and type(value) is not bool
+        and not (value <= subschema["maximum"])
+    ):
         return False
-    if "exclusiveMinimum" in subschema and not (value > subschema["exclusiveMinimum"]):
+    if (
+        "exclusiveMinimum" in subschema
+        and isinstance(value, (int, float))
+        and type(value) is not bool
+        and not (value > subschema["exclusiveMinimum"])
+    ):
         return False
-    if "exclusiveMaximum" in subschema and not (value < subschema["exclusiveMaximum"]):
+    if (
+        "exclusiveMaximum" in subschema
+        and isinstance(value, (int, float))
+        and type(value) is not bool
+        and not (value < subschema["exclusiveMaximum"])
+    ):
         return False
-    if "multipleOf" in subschema and value % subschema["multipleOf"] != 0:
+    if (
+        "multipleOf" in subschema
+        and isinstance(value, (int, float))
+        and type(value) is not bool
+        and value % subschema["multipleOf"] != 0
+    ):
         return False
-    if "maxLength" in subschema and not (len(value) <= subschema["maxLength"]):
+    if (
+        "maxLength" in subschema
+        and isinstance(value, str)
+        and not (len(value) <= subschema["maxLength"])
+    ):
         return False
-    if "minLength" in subschema and not (len(value) >= subschema["minLength"]):
+    if (
+        "minLength" in subschema
+        and isinstance(value, str)
+        and not (len(value) >= subschema["minLength"])
+    ):
         return False
     if "enum" in subschema and not (value in subschema["enum"]):
+        return False
+    if "const" in subschema and not _json_equal(value, subschema["const"]):
         return False
     if "not" in subschema and validate_subschema(subschema["not"], value):
         return False
@@ -126,6 +188,8 @@ def validate_subschema(subschema: dict, value: Any) -> bool:  # noqa: C901
 
 
 class JSONSchemaFieldDescriptor(Protocol[A]):
+    COMPARISONS: ClassVar[dict] = {}
+
     def __init__(self, *, default: Any = None, metadata: Any = None) -> None:
         self.__orig_bases__ = None
         self._default = default
@@ -170,7 +234,7 @@ class JSONSchemaFieldDescriptor(Protocol[A]):
         if self._not is not None and validate_subschema(self._not, value):
             raise e.SubSchemaFailureViolation("subschema failed")
 
-    def __set__(self, obj, value):
+    def __set__(self, obj, value):  # noqa: C901
         errors = (
             obj.__dict__.get("_validation_errors") if hasattr(obj, "__dict__") else None
         )
@@ -219,10 +283,61 @@ class JSONSchemaFieldDescriptor(Protocol[A]):
 
 
 class ArrayDescriptor(JSONSchemaFieldDescriptor[C]):
+    COMPARISONS: ClassVar[dict] = {
+        "maxItems": {
+            "comparator": lambda d: partial(lambda bound, v: 0 <= len(v) <= bound, d),
+            "errorClass": e.ArrayLengthViolation,
+        },
+        "minItems": {
+            "comparator": lambda d: partial(lambda bound, v: 0 <= bound <= len(v), d),
+            "errorClass": e.ArrayLengthViolation,
+        },
+        "maxContains": {
+            "comparator": lambda d: partial(
+                lambda bound, v, contains=None: (
+                    True
+                    if contains is None
+                    else (
+                        sum(1 for item in v if validate_subschema(contains, item))
+                        <= bound
+                    )
+                ),
+                d,
+            ),
+            "errorClass": e.ArrayElementViolation,
+        },
+        "minContains": {
+            "comparator": lambda d: partial(
+                lambda bound, v, contains=None: (
+                    True
+                    if contains is None
+                    else (
+                        sum(1 for item in v if validate_subschema(contains, item))
+                        >= bound
+                    )
+                ),
+                d,
+            ),
+            "errorClass": e.ArrayElementViolation,
+        },
+        "uniqueItems": {
+            "comparator": lambda d: partial(
+                lambda unique, v: _are_items_unique(v) if unique else True, d
+            ),
+            "errorClass": e.ArrayUniqueElementViolation,
+        },
+    }
+
     def __init__(self, *, default=None, metadata=None) -> None:
         super().__init__(default=default, metadata=metadata or {})
+        self._min_items = self._metadata.get("minItems")
+        self._max_items = self._metadata.get("maxItems")
+        self._unique_items = self._metadata.get("uniqueItems")
+        self._contains = self._metadata.get("contains")
+        self._min_contains = self._metadata.get("minContains")
+        self._max_contains = self._metadata.get("maxContains")
 
-    def __set__(self, obj, value):
+    def __set__(self, obj, value):  # noqa: C901
         errors = (
             obj.__dict__.get("_validation_errors") if hasattr(obj, "__dict__") else None
         )
@@ -233,6 +348,38 @@ class ArrayDescriptor(JSONSchemaFieldDescriptor[C]):
                 )
             if not isinstance(value, (list, tuple)):
                 raise e.ValueTypeViolation(f"{self._name}={value} expected array")
+            if self._min_items is not None and not self.COMPARISONS["minItems"][
+                "comparator"
+            ](self._min_items)(value):
+                raise self.COMPARISONS["minItems"]["errorClass"](
+                    f"{self._name}={value} =/= minItems={self._min_items} constraint fails"
+                )
+            if self._max_items is not None and not self.COMPARISONS["maxItems"][
+                "comparator"
+            ](self._max_items)(value):
+                raise self.COMPARISONS["maxItems"]["errorClass"](
+                    f"{self._name}={value} =/= maxItems={self._max_items} constraint fails"
+                )
+            if self._unique_items is not None and not self.COMPARISONS["uniqueItems"][
+                "comparator"
+            ](self._unique_items)(value):
+                raise self.COMPARISONS["uniqueItems"]["errorClass"](
+                    f"{self._name}={value} =/= uniqueItems={self._unique_items} constraint fails"
+                )
+            if self._contains is not None:
+                min_c = self._min_contains if self._min_contains is not None else 1
+                if not self.COMPARISONS["minContains"]["comparator"](min_c)(
+                    value, contains=self._contains
+                ):
+                    raise self.COMPARISONS["minContains"]["errorClass"](
+                        f"{self._name}={value} =/= minContains={min_c} constraint fails"
+                    )
+                if self._max_contains is not None and not self.COMPARISONS[
+                    "maxContains"
+                ]["comparator"](self._max_contains)(value, contains=self._contains):
+                    raise self.COMPARISONS["maxContains"]["errorClass"](
+                        f"{self._name}={value} =/= maxContains={self._max_contains} constraint fails"
+                    )
             if self._enum is not None and value not in self._enum:
                 raise e.ValueTypeViolation(
                     f"{self._name}={value} =/= enum={self._raw_enum} constraint fails"
@@ -256,6 +403,8 @@ class ArrayDescriptor(JSONSchemaFieldDescriptor[C]):
 
 
 class BooleanDescriptor(JSONSchemaFieldDescriptor[B]):
+    COMPARISONS: ClassVar[dict] = {}
+
     def __init__(self, *, default=None, metadata=None) -> None:
         super().__init__(default=default, metadata=metadata or {})
 
@@ -293,6 +442,8 @@ class BooleanDescriptor(JSONSchemaFieldDescriptor[B]):
 
 
 class ObjectDescriptor(JSONSchemaFieldDescriptor[O]):
+    COMPARISONS: ClassVar[dict] = {}
+
     def __init__(self, *, default=None, metadata=None) -> None:
         super().__init__(default=default, metadata=metadata or {})
 
@@ -330,6 +481,8 @@ class ObjectDescriptor(JSONSchemaFieldDescriptor[O]):
 
 
 class NullDescriptor(JSONSchemaFieldDescriptor[S]):
+    COMPARISONS: ClassVar[dict] = {}
+
     def __init__(self, *, default=None, metadata=None) -> None:
         super().__init__(default=default, metadata=metadata or {})
 
@@ -383,7 +536,7 @@ class CollectionDescriptor(JSONSchemaFieldDescriptor[C]):
         self._min_length = self._metadata.get("minLength")
         self._max_length = self._metadata.get("maxLength")
 
-    def __set__(self, obj, value):
+    def __set__(self, obj, value):  # noqa: C901
         errors = (
             obj.__dict__.get("_validation_errors") if hasattr(obj, "__dict__") else None
         )
@@ -394,12 +547,16 @@ class CollectionDescriptor(JSONSchemaFieldDescriptor[C]):
                 )
             if not isinstance(value, (list, tuple, set)):
                 raise e.ValueTypeViolation(f"{self._name} expected collection")
-            if self._min_length is not None and len(value) < self._min_length:
-                raise e.LengthConstraintViolation(
+            if self._min_length is not None and not self.COMPARISONS["minLength"][
+                "comparator"
+            ](self._min_length)(value):
+                raise self.COMPARISONS["minLength"]["errorClass"](
                     f"{self._name}={value} =/= minLength={self._min_length} constraint fails"
                 )
-            if self._max_length is not None and len(value) > self._max_length:
-                raise e.LengthConstraintViolation(
+            if self._max_length is not None and not self.COMPARISONS["maxLength"][
+                "comparator"
+            ](self._max_length)(value):
+                raise self.COMPARISONS["maxLength"]["errorClass"](
                     f"{self._name}={value} =/= maxLength={self._max_length} constraint fails"
                 )
             if self._enum is not None and value not in self._enum:
@@ -427,11 +584,11 @@ class CollectionDescriptor(JSONSchemaFieldDescriptor[C]):
 class StringDescriptor(JSONSchemaFieldDescriptor[AnyStr]):
     COMPARISONS: ClassVar[dict] = {
         "maxLength": {
-            "comparator": lambda d: partial(lambda bound, v: len(v) <= bound, d),
+            "comparator": lambda d: partial(lambda bound, v: len(v) <= int(bound), d),
             "errorClass": e.LengthConstraintViolation,
         },
         "minLength": {
-            "comparator": lambda d: partial(lambda bound, v: len(v) >= bound, d),
+            "comparator": lambda d: partial(lambda bound, v: len(v) >= int(bound), d),
             "errorClass": e.LengthConstraintViolation,
         },
         "format": {
@@ -448,7 +605,7 @@ class StringDescriptor(JSONSchemaFieldDescriptor[AnyStr]):
         self._max_length = self._metadata.get("maxLength")
         self._format = self._metadata.get("format")
 
-    def __set__(self, obj, value):
+    def __set__(self, obj, value):  # noqa: C901
         errors = (
             obj.__dict__.get("_validation_errors") if hasattr(obj, "__dict__") else None
         )
@@ -459,12 +616,16 @@ class StringDescriptor(JSONSchemaFieldDescriptor[AnyStr]):
                 )
             if type(value) is not str and not isinstance(value, (str, bytes)):
                 raise e.ValueTypeViolation(f"{self._name}={value} expected string")
-            if self._min_length is not None and len(value) < self._min_length:
-                raise e.LengthConstraintViolation(
+            if self._min_length is not None and not self.COMPARISONS["minLength"][
+                "comparator"
+            ](self._min_length)(value):
+                raise self.COMPARISONS["minLength"]["errorClass"](
                     f"{self._name}={value} =/= minLength={self._min_length} constraint fails"
                 )
-            if self._max_length is not None and len(value) > self._max_length:
-                raise e.LengthConstraintViolation(
+            if self._max_length is not None and not self.COMPARISONS["maxLength"][
+                "comparator"
+            ](self._max_length)(value):
+                raise self.COMPARISONS["maxLength"]["errorClass"](
                     f"{self._name}={value} =/= maxLength={self._max_length} constraint fails"
                 )
             if self._format is not None and not self.COMPARISONS["format"][
@@ -527,7 +688,7 @@ class IntegerDescriptor(JSONSchemaFieldDescriptor[int]):
         self._exclusive_maximum = self._metadata.get("exclusiveMaximum")
         self._multiple_of = self._metadata.get("multipleOf")
 
-    def __set__(self, obj, value):
+    def __set__(self, obj, value):  # noqa: C901
         errors = (
             obj.__dict__.get("_validation_errors") if hasattr(obj, "__dict__") else None
         )
@@ -538,24 +699,34 @@ class IntegerDescriptor(JSONSchemaFieldDescriptor[int]):
                 )
             if type(value) is bool or not isinstance(value, int):
                 raise e.ValueTypeViolation(f"{self._name}={value} expected integer")
-            if self._minimum is not None and value < self._minimum:
-                raise e.RangeConstraintViolation(
+            if self._minimum is not None and not self.COMPARISONS["minimum"][
+                "comparator"
+            ](self._minimum)(value):
+                raise self.COMPARISONS["minimum"]["errorClass"](
                     f"{self._name}={value} =/= minimum={self._minimum} constraint fails"
                 )
-            if self._maximum is not None and value > self._maximum:
-                raise e.RangeConstraintViolation(
+            if self._maximum is not None and not self.COMPARISONS["maximum"][
+                "comparator"
+            ](self._maximum)(value):
+                raise self.COMPARISONS["maximum"]["errorClass"](
                     f"{self._name}={value} =/= maximum={self._maximum} constraint fails"
                 )
-            if self._exclusive_minimum is not None and value <= self._exclusive_minimum:
-                raise e.RangeConstraintViolation(
+            if self._exclusive_minimum is not None and not self.COMPARISONS[
+                "exclusiveMinimum"
+            ]["comparator"](self._exclusive_minimum)(value):
+                raise self.COMPARISONS["exclusiveMinimum"]["errorClass"](
                     f"{self._name}={value} =/= exclusiveMinimum={self._exclusive_minimum} constraint fails"
                 )
-            if self._exclusive_maximum is not None and value >= self._exclusive_maximum:
-                raise e.RangeConstraintViolation(
+            if self._exclusive_maximum is not None and not self.COMPARISONS[
+                "exclusiveMaximum"
+            ]["comparator"](self._exclusive_maximum)(value):
+                raise self.COMPARISONS["exclusiveMaximum"]["errorClass"](
                     f"{self._name}={value} =/= exclusiveMaximum={self._exclusive_maximum} constraint fails"
                 )
-            if self._multiple_of is not None and value % self._multiple_of != 0:
-                raise e.RangeConstraintViolation(
+            if self._multiple_of is not None and not self.COMPARISONS["multipleOf"][
+                "comparator"
+            ](self._multiple_of)(value):
+                raise self.COMPARISONS["multipleOf"]["errorClass"](
                     f"{self._name}={value} =/= multipleOf={self._multiple_of} constraint fails"
                 )
             if self._enum is not None and value not in self._enum:
@@ -612,7 +783,7 @@ class NumberDescriptor(JSONSchemaFieldDescriptor[N]):
         self._exclusive_maximum = self._metadata.get("exclusiveMaximum")
         self._multiple_of = self._metadata.get("multipleOf")
 
-    def __set__(self, obj, value):
+    def __set__(self, obj, value):  # noqa: C901
         errors = (
             obj.__dict__.get("_validation_errors") if hasattr(obj, "__dict__") else None
         )
@@ -623,24 +794,34 @@ class NumberDescriptor(JSONSchemaFieldDescriptor[N]):
                 )
             if type(value) is bool or not isinstance(value, (int, float)):
                 raise e.ValueTypeViolation(f"{self._name}={value} expected number")
-            if self._minimum is not None and value < self._minimum:
-                raise e.RangeConstraintViolation(
+            if self._minimum is not None and not self.COMPARISONS["minimum"][
+                "comparator"
+            ](self._minimum)(value):
+                raise self.COMPARISONS["minimum"]["errorClass"](
                     f"{self._name}={value} =/= minimum={self._minimum} constraint fails"
                 )
-            if self._maximum is not None and value > self._maximum:
-                raise e.RangeConstraintViolation(
+            if self._maximum is not None and not self.COMPARISONS["maximum"][
+                "comparator"
+            ](self._maximum)(value):
+                raise self.COMPARISONS["maximum"]["errorClass"](
                     f"{self._name}={value} =/= maximum={self._maximum} constraint fails"
                 )
-            if self._exclusive_minimum is not None and value <= self._exclusive_minimum:
-                raise e.RangeConstraintViolation(
+            if self._exclusive_minimum is not None and not self.COMPARISONS[
+                "exclusiveMinimum"
+            ]["comparator"](self._exclusive_minimum)(value):
+                raise self.COMPARISONS["exclusiveMinimum"]["errorClass"](
                     f"{self._name}={value} =/= exclusiveMinimum={self._exclusive_minimum} constraint fails"
                 )
-            if self._exclusive_maximum is not None and value >= self._exclusive_maximum:
-                raise e.RangeConstraintViolation(
+            if self._exclusive_maximum is not None and not self.COMPARISONS[
+                "exclusiveMaximum"
+            ]["comparator"](self._exclusive_maximum)(value):
+                raise self.COMPARISONS["exclusiveMaximum"]["errorClass"](
                     f"{self._name}={value} =/= exclusiveMaximum={self._exclusive_maximum} constraint fails"
                 )
-            if self._multiple_of is not None and value % self._multiple_of != 0:
-                raise e.RangeConstraintViolation(
+            if self._multiple_of is not None and not self.COMPARISONS["multipleOf"][
+                "comparator"
+            ](self._multiple_of)(value):
+                raise self.COMPARISONS["multipleOf"]["errorClass"](
                     f"{self._name}={value} =/= multipleOf={self._multiple_of} constraint fails"
                 )
             if self._enum is not None and value not in self._enum:
@@ -666,6 +847,7 @@ class NumberDescriptor(JSONSchemaFieldDescriptor[N]):
 
 
 class SpecialKeywordDescriptor(JSONSchemaFieldDescriptor[A]):
+    COMPARISONS: ClassVar[dict] = {}
     MAP_TTYPE: ClassVar[dict] = {
         str: StringDescriptor,
         float: NumberDescriptor,

@@ -84,7 +84,7 @@ The class-like syntax of creating dataclasses is a useful way to model a valid J
 
 ### Useable everywhere
 
-Taking the time to construct a plain ol' Pythjon dataclass, ensures widespread utility across of multiple domains of study and applications.
+Taking the time to construct a plain ol' Python dataclass, ensures widespread utility across of multiple domains of study and applications.
 
 ### Just-enough validation
 
@@ -113,11 +113,12 @@ Below is the current support status for the keywords defined in [Section 6 (A Vo
 | `maxLength` | 6.3.1 | String Instances | ✅ |
 | `minLength` | 6.3.2 | String Instances | ✅ |
 | `pattern` | 6.3.3 | String Instances | ❌ |
-| `maxItems` | 6.4.1 | Array Instances | ❌ |
-| `minItems` | 6.4.2 | Array Instances | ❌ |
-| `uniqueItems` | 6.4.3 | Array Instances | ❌ |
-| `maxContains` | 6.4.4 | Array Instances | ❌ |
-| `minContains` | 6.4.5 | Array Instances | ❌ |
+| `format` | 7.3 | String Instances | (partial) |
+| `maxItems` | 6.4.1 | Array Instances | ✅ |
+| `minItems` | 6.4.2 | Array Instances | ✅ |
+| `uniqueItems` | 6.4.3 | Array Instances | ✅ |
+| `maxContains` | 6.4.4 | Array Instances | ✅ |
+| `minContains` | 6.4.5 | Array Instances | ✅ |
 | `maxProperties` | 6.5.1 | Object Instances | ❌ |
 | `minProperties` | 6.5.2 | Object Instances | ❌ |
 | `required` | 6.5.3 | Object Instances | ✅ |
@@ -132,7 +133,7 @@ Below is the current support status for the string `format` keywords defined in 
 | `date-time` | 7.3.1 | Dates, Times, and Duration | ✅ |
 | `date` | 7.3.1 | Dates, Times, and Duration | ✅ |
 | `time` | 7.3.1 | Dates, Times, and Duration | ✅ |
-| `duration` | 7.3.1 | Dates, Times, and Duration | ❌ |
+| `duration` | 7.3.1 | Dates, Times, and Duration | ✅ |
 | `email` | 7.3.2 | Email Addresses | ✅ |
 | `idn-email` | 7.3.2 | Email Addresses | ❌ |
 | `hostname` | 7.3.3 | Hostnames | ✅ |
@@ -175,4 +176,4 @@ The performance benchmark evaluates `SchemaModelFactory` (V1, based on functor d
 
 This codebase is licensed under the GPLv3+ and therefore the use, inclusion, modification, and distribution of this software is governed by the GPL.
 
-To opt-out of the obligations of the GPL, inquire about the commercial license by sending an email to: license AT civichacker.com.
+To inquire about the commercial license by sending an email to: license AT civichacker.com.
