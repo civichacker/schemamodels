@@ -500,9 +500,7 @@ def test_array_descriptor_min_max_contains():
             (
                 "items",
                 bases.ArrayDescriptor,
-                bases.ArrayDescriptor(
-                    metadata={"contains": {"type": "string"}}
-                ),
+                bases.ArrayDescriptor(metadata={"contains": {"type": "string"}}),
             )
         ],
     )
@@ -607,14 +605,18 @@ def test_array_descriptor_comparisons_direct():
     assert max_items_cmp([1, 2]) is True
     assert max_items_cmp([1, 2, 3]) is False
 
-    unique_items_cmp = bases.ArrayDescriptor.COMPARISONS["uniqueItems"]["comparator"](True)
+    unique_items_cmp = bases.ArrayDescriptor.COMPARISONS["uniqueItems"]["comparator"](
+        True
+    )
     assert unique_items_cmp([1, 2, 3]) is True
     assert unique_items_cmp([]) is True
     assert unique_items_cmp([1, 1]) is False
     assert unique_items_cmp([{"a": 1}, {"a": 1}]) is False
     assert unique_items_cmp([{"a": 1}, {"a": 2}]) is True
 
-    non_unique_cmp = bases.ArrayDescriptor.COMPARISONS["uniqueItems"]["comparator"](False)
+    non_unique_cmp = bases.ArrayDescriptor.COMPARISONS["uniqueItems"]["comparator"](
+        False
+    )
     assert non_unique_cmp([1, 1]) is True
 
     min_contains_cmp = bases.ArrayDescriptor.COMPARISONS["minContains"]["comparator"](2)

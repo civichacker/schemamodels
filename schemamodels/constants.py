@@ -9,7 +9,12 @@ from operator import contains, ge, gt, le, lt, mod, not_
 from urllib.parse import urlparse
 
 from schemamodels import exceptions
-from schemamodels.utils import _are_items_unique, ifraises, raise_on_none, validate_subschema
+from schemamodels.utils import (
+    _are_items_unique,
+    ifraises,
+    raise_on_none,
+    validate_subschema,
+)
 
 REQUIRED_MISSING = object()
 
@@ -89,10 +94,10 @@ COMPARISONS = {
     ),
     "uniqueItems": lambda d: partial(
         lambda unique, v: (
-            _are_items_unique(v) if unique else True
-        )
-        if isinstance(v, (list, tuple))
-        else True,
+            (_are_items_unique(v) if unique else True)
+            if isinstance(v, (list, tuple))
+            else True
+        ),
         d,
     ),
     "contains": lambda d: partial(
@@ -103,8 +108,8 @@ COMPARISONS = {
         ),
         d,
     ),
-    "minContains": lambda d: (lambda v: True),
-    "maxContains": lambda d: (lambda v: True),
+    "minContains": lambda d: lambda v: True,
+    "maxContains": lambda d: lambda v: True,
 }
 
 STRING_FORMATS = {

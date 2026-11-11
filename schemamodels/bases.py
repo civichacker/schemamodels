@@ -120,19 +120,52 @@ def validate_subschema(subschema: dict | bool, value: Any) -> bool:  # noqa: C90
             return False
         if t == "null" and value is not None:
             return False
-    if "minimum" in subschema and isinstance(value, (int, float)) and type(value) is not bool and not (value >= subschema["minimum"]):
+    if (
+        "minimum" in subschema
+        and isinstance(value, (int, float))
+        and type(value) is not bool
+        and not (value >= subschema["minimum"])
+    ):
         return False
-    if "maximum" in subschema and isinstance(value, (int, float)) and type(value) is not bool and not (value <= subschema["maximum"]):
+    if (
+        "maximum" in subschema
+        and isinstance(value, (int, float))
+        and type(value) is not bool
+        and not (value <= subschema["maximum"])
+    ):
         return False
-    if "exclusiveMinimum" in subschema and isinstance(value, (int, float)) and type(value) is not bool and not (value > subschema["exclusiveMinimum"]):
+    if (
+        "exclusiveMinimum" in subschema
+        and isinstance(value, (int, float))
+        and type(value) is not bool
+        and not (value > subschema["exclusiveMinimum"])
+    ):
         return False
-    if "exclusiveMaximum" in subschema and isinstance(value, (int, float)) and type(value) is not bool and not (value < subschema["exclusiveMaximum"]):
+    if (
+        "exclusiveMaximum" in subschema
+        and isinstance(value, (int, float))
+        and type(value) is not bool
+        and not (value < subschema["exclusiveMaximum"])
+    ):
         return False
-    if "multipleOf" in subschema and isinstance(value, (int, float)) and type(value) is not bool and value % subschema["multipleOf"] != 0:
+    if (
+        "multipleOf" in subschema
+        and isinstance(value, (int, float))
+        and type(value) is not bool
+        and value % subschema["multipleOf"] != 0
+    ):
         return False
-    if "maxLength" in subschema and isinstance(value, str) and not (len(value) <= subschema["maxLength"]):
+    if (
+        "maxLength" in subschema
+        and isinstance(value, str)
+        and not (len(value) <= subschema["maxLength"])
+    ):
         return False
-    if "minLength" in subschema and isinstance(value, str) and not (len(value) >= subschema["minLength"]):
+    if (
+        "minLength" in subschema
+        and isinstance(value, str)
+        and not (len(value) >= subschema["minLength"])
+    ):
         return False
     if "enum" in subschema and not (value in subschema["enum"]):
         return False
@@ -249,25 +282,21 @@ class JSONSchemaFieldDescriptor(Protocol[A]):
 
 class ArrayDescriptor(JSONSchemaFieldDescriptor[C]):
     COMPARISONS: ClassVar[dict] = {
-        'maxItems': {
+        "maxItems": {
             "comparator": lambda d: partial(lambda bound, v: 0 <= len(v) <= bound, d),
             "errorClass": e.ArrayLengthViolation,
         },
-        'minItems': {
+        "minItems": {
             "comparator": lambda d: partial(lambda bound, v: 0 <= bound <= len(v), d),
             "errorClass": e.ArrayLengthViolation,
         },
-        'maxContains': {
+        "maxContains": {
             "comparator": lambda d: partial(
                 lambda bound, v, contains=None: (
                     True
                     if contains is None
                     else (
-                        sum(
-                            1
-                            for item in v
-                            if validate_subschema(contains, item)
-                        )
+                        sum(1 for item in v if validate_subschema(contains, item))
                         <= bound
                     )
                 ),
@@ -275,17 +304,13 @@ class ArrayDescriptor(JSONSchemaFieldDescriptor[C]):
             ),
             "errorClass": e.ArrayElementViolation,
         },
-        'minContains': {
+        "minContains": {
             "comparator": lambda d: partial(
                 lambda bound, v, contains=None: (
                     True
                     if contains is None
                     else (
-                        sum(
-                            1
-                            for item in v
-                            if validate_subschema(contains, item)
-                        )
+                        sum(1 for item in v if validate_subschema(contains, item))
                         >= bound
                     )
                 ),
@@ -293,9 +318,9 @@ class ArrayDescriptor(JSONSchemaFieldDescriptor[C]):
             ),
             "errorClass": e.ArrayElementViolation,
         },
-        'uniqueItems': {
+        "uniqueItems": {
             "comparator": lambda d: partial(
-                lambda unique, v: (_are_items_unique(v) if unique else True), d
+                lambda unique, v: _are_items_unique(v) if unique else True, d
             ),
             "errorClass": e.ArrayUniqueElementViolation,
         },
@@ -321,15 +346,21 @@ class ArrayDescriptor(JSONSchemaFieldDescriptor[C]):
                 )
             if not isinstance(value, (list, tuple)):
                 raise e.ValueTypeViolation(f"{self._name}={value} expected array")
-            if self._min_items is not None and not self.COMPARISONS["minItems"]["comparator"](self._min_items)(value):
+            if self._min_items is not None and not self.COMPARISONS["minItems"][
+                "comparator"
+            ](self._min_items)(value):
                 raise self.COMPARISONS["minItems"]["errorClass"](
                     f"{self._name}={value} =/= minItems={self._min_items} constraint fails"
                 )
-            if self._max_items is not None and not self.COMPARISONS["maxItems"]["comparator"](self._max_items)(value):
+            if self._max_items is not None and not self.COMPARISONS["maxItems"][
+                "comparator"
+            ](self._max_items)(value):
                 raise self.COMPARISONS["maxItems"]["errorClass"](
                     f"{self._name}={value} =/= maxItems={self._max_items} constraint fails"
                 )
-            if self._unique_items is not None and not self.COMPARISONS["uniqueItems"]["comparator"](self._unique_items)(value):
+            if self._unique_items is not None and not self.COMPARISONS["uniqueItems"][
+                "comparator"
+            ](self._unique_items)(value):
                 raise self.COMPARISONS["uniqueItems"]["errorClass"](
                     f"{self._name}={value} =/= uniqueItems={self._unique_items} constraint fails"
                 )
@@ -508,11 +539,15 @@ class CollectionDescriptor(JSONSchemaFieldDescriptor[C]):
                 )
             if not isinstance(value, (list, tuple, set)):
                 raise e.ValueTypeViolation(f"{self._name} expected collection")
-            if self._min_length is not None and not self.COMPARISONS["minLength"]["comparator"](self._min_length)(value):
+            if self._min_length is not None and not self.COMPARISONS["minLength"][
+                "comparator"
+            ](self._min_length)(value):
                 raise self.COMPARISONS["minLength"]["errorClass"](
                     f"{self._name}={value} =/= minLength={self._min_length} constraint fails"
                 )
-            if self._max_length is not None and not self.COMPARISONS["maxLength"]["comparator"](self._max_length)(value):
+            if self._max_length is not None and not self.COMPARISONS["maxLength"][
+                "comparator"
+            ](self._max_length)(value):
                 raise self.COMPARISONS["maxLength"]["errorClass"](
                     f"{self._name}={value} =/= maxLength={self._max_length} constraint fails"
                 )
@@ -573,11 +608,15 @@ class StringDescriptor(JSONSchemaFieldDescriptor[AnyStr]):
                 )
             if type(value) is not str and not isinstance(value, (str, bytes)):
                 raise e.ValueTypeViolation(f"{self._name}={value} expected string")
-            if self._min_length is not None and not self.COMPARISONS["minLength"]["comparator"](self._min_length)(value):
+            if self._min_length is not None and not self.COMPARISONS["minLength"][
+                "comparator"
+            ](self._min_length)(value):
                 raise self.COMPARISONS["minLength"]["errorClass"](
                     f"{self._name}={value} =/= minLength={self._min_length} constraint fails"
                 )
-            if self._max_length is not None and not self.COMPARISONS["maxLength"]["comparator"](self._max_length)(value):
+            if self._max_length is not None and not self.COMPARISONS["maxLength"][
+                "comparator"
+            ](self._max_length)(value):
                 raise self.COMPARISONS["maxLength"]["errorClass"](
                     f"{self._name}={value} =/= maxLength={self._max_length} constraint fails"
                 )
@@ -652,23 +691,33 @@ class IntegerDescriptor(JSONSchemaFieldDescriptor[int]):
                 )
             if type(value) is bool or not isinstance(value, int):
                 raise e.ValueTypeViolation(f"{self._name}={value} expected integer")
-            if self._minimum is not None and not self.COMPARISONS["minimum"]["comparator"](self._minimum)(value):
+            if self._minimum is not None and not self.COMPARISONS["minimum"][
+                "comparator"
+            ](self._minimum)(value):
                 raise self.COMPARISONS["minimum"]["errorClass"](
                     f"{self._name}={value} =/= minimum={self._minimum} constraint fails"
                 )
-            if self._maximum is not None and not self.COMPARISONS["maximum"]["comparator"](self._maximum)(value):
+            if self._maximum is not None and not self.COMPARISONS["maximum"][
+                "comparator"
+            ](self._maximum)(value):
                 raise self.COMPARISONS["maximum"]["errorClass"](
                     f"{self._name}={value} =/= maximum={self._maximum} constraint fails"
                 )
-            if self._exclusive_minimum is not None and not self.COMPARISONS["exclusiveMinimum"]["comparator"](self._exclusive_minimum)(value):
+            if self._exclusive_minimum is not None and not self.COMPARISONS[
+                "exclusiveMinimum"
+            ]["comparator"](self._exclusive_minimum)(value):
                 raise self.COMPARISONS["exclusiveMinimum"]["errorClass"](
                     f"{self._name}={value} =/= exclusiveMinimum={self._exclusive_minimum} constraint fails"
                 )
-            if self._exclusive_maximum is not None and not self.COMPARISONS["exclusiveMaximum"]["comparator"](self._exclusive_maximum)(value):
+            if self._exclusive_maximum is not None and not self.COMPARISONS[
+                "exclusiveMaximum"
+            ]["comparator"](self._exclusive_maximum)(value):
                 raise self.COMPARISONS["exclusiveMaximum"]["errorClass"](
                     f"{self._name}={value} =/= exclusiveMaximum={self._exclusive_maximum} constraint fails"
                 )
-            if self._multiple_of is not None and not self.COMPARISONS["multipleOf"]["comparator"](self._multiple_of)(value):
+            if self._multiple_of is not None and not self.COMPARISONS["multipleOf"][
+                "comparator"
+            ](self._multiple_of)(value):
                 raise self.COMPARISONS["multipleOf"]["errorClass"](
                     f"{self._name}={value} =/= multipleOf={self._multiple_of} constraint fails"
                 )
@@ -737,23 +786,33 @@ class NumberDescriptor(JSONSchemaFieldDescriptor[N]):
                 )
             if type(value) is bool or not isinstance(value, (int, float)):
                 raise e.ValueTypeViolation(f"{self._name}={value} expected number")
-            if self._minimum is not None and not self.COMPARISONS["minimum"]["comparator"](self._minimum)(value):
+            if self._minimum is not None and not self.COMPARISONS["minimum"][
+                "comparator"
+            ](self._minimum)(value):
                 raise self.COMPARISONS["minimum"]["errorClass"](
                     f"{self._name}={value} =/= minimum={self._minimum} constraint fails"
                 )
-            if self._maximum is not None and not self.COMPARISONS["maximum"]["comparator"](self._maximum)(value):
+            if self._maximum is not None and not self.COMPARISONS["maximum"][
+                "comparator"
+            ](self._maximum)(value):
                 raise self.COMPARISONS["maximum"]["errorClass"](
                     f"{self._name}={value} =/= maximum={self._maximum} constraint fails"
                 )
-            if self._exclusive_minimum is not None and not self.COMPARISONS["exclusiveMinimum"]["comparator"](self._exclusive_minimum)(value):
+            if self._exclusive_minimum is not None and not self.COMPARISONS[
+                "exclusiveMinimum"
+            ]["comparator"](self._exclusive_minimum)(value):
                 raise self.COMPARISONS["exclusiveMinimum"]["errorClass"](
                     f"{self._name}={value} =/= exclusiveMinimum={self._exclusive_minimum} constraint fails"
                 )
-            if self._exclusive_maximum is not None and not self.COMPARISONS["exclusiveMaximum"]["comparator"](self._exclusive_maximum)(value):
+            if self._exclusive_maximum is not None and not self.COMPARISONS[
+                "exclusiveMaximum"
+            ]["comparator"](self._exclusive_maximum)(value):
                 raise self.COMPARISONS["exclusiveMaximum"]["errorClass"](
                     f"{self._name}={value} =/= exclusiveMaximum={self._exclusive_maximum} constraint fails"
                 )
-            if self._multiple_of is not None and not self.COMPARISONS["multipleOf"]["comparator"](self._multiple_of)(value):
+            if self._multiple_of is not None and not self.COMPARISONS["multipleOf"][
+                "comparator"
+            ](self._multiple_of)(value):
                 raise self.COMPARISONS["multipleOf"]["errorClass"](
                     f"{self._name}={value} =/= multipleOf={self._multiple_of} constraint fails"
                 )

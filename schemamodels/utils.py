@@ -56,19 +56,52 @@ def validate_subschema(subschema: dict | bool, value: Any) -> bool:  # noqa: C90
             return False
         if t == "null" and value is not None:
             return False
-    if "minimum" in subschema and isinstance(value, (int, float)) and type(value) is not bool and not (value >= subschema["minimum"]):
+    if (
+        "minimum" in subschema
+        and isinstance(value, (int, float))
+        and type(value) is not bool
+        and not (value >= subschema["minimum"])
+    ):
         return False
-    if "maximum" in subschema and isinstance(value, (int, float)) and type(value) is not bool and not (value <= subschema["maximum"]):
+    if (
+        "maximum" in subschema
+        and isinstance(value, (int, float))
+        and type(value) is not bool
+        and not (value <= subschema["maximum"])
+    ):
         return False
-    if "exclusiveMinimum" in subschema and isinstance(value, (int, float)) and type(value) is not bool and not (value > subschema["exclusiveMinimum"]):
+    if (
+        "exclusiveMinimum" in subschema
+        and isinstance(value, (int, float))
+        and type(value) is not bool
+        and not (value > subschema["exclusiveMinimum"])
+    ):
         return False
-    if "exclusiveMaximum" in subschema and isinstance(value, (int, float)) and type(value) is not bool and not (value < subschema["exclusiveMaximum"]):
+    if (
+        "exclusiveMaximum" in subschema
+        and isinstance(value, (int, float))
+        and type(value) is not bool
+        and not (value < subschema["exclusiveMaximum"])
+    ):
         return False
-    if "multipleOf" in subschema and isinstance(value, (int, float)) and type(value) is not bool and value % subschema["multipleOf"] != 0:
+    if (
+        "multipleOf" in subschema
+        and isinstance(value, (int, float))
+        and type(value) is not bool
+        and value % subschema["multipleOf"] != 0
+    ):
         return False
-    if "maxLength" in subschema and isinstance(value, str) and not (len(value) <= subschema["maxLength"]):
+    if (
+        "maxLength" in subschema
+        and isinstance(value, str)
+        and not (len(value) <= subschema["maxLength"])
+    ):
         return False
-    if "minLength" in subschema and isinstance(value, str) and not (len(value) >= subschema["minLength"]):
+    if (
+        "minLength" in subschema
+        and isinstance(value, str)
+        and not (len(value) >= subschema["minLength"])
+    ):
         return False
     if "enum" in subschema and not (value in subschema["enum"]):
         return False

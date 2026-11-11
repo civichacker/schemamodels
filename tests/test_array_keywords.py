@@ -613,9 +613,7 @@ def test_array_comprehensive_keywords_combination(Factory):
 
     # tags maxItems violation
     with pytest.raises(exceptions.ArrayLengthViolation):
-        ComprehensiveArrayKeywords(
-            tags=["a", "b", "c", "d", "e", "f"], scores=[95]
-        )
+        ComprehensiveArrayKeywords(tags=["a", "b", "c", "d", "e", "f"], scores=[95])
 
     # tags uniqueItems violation
     with pytest.raises(exceptions.ArrayUniqueElementViolation):
@@ -627,6 +625,4 @@ def test_array_comprehensive_keywords_combination(Factory):
 
     # scores maxContains violation (3 number matches)
     with pytest.raises(exceptions.ArrayElementViolation):
-        ComprehensiveArrayKeywords(
-            tags=["python", "pytest"], scores=[10, 20, 30]
-        )
+        ComprehensiveArrayKeywords(tags=["python", "pytest"], scores=[10, 20, 30])
