@@ -205,7 +205,7 @@ class SchemaModelFactory:
         funcs = [generate_functors(s) for s in values[subschema]]
         return {subschema: partial(functor_eval, funcs)}
 
-    def process_object(
+    def process_object(  # noqa: C901
         self, schema: dict, required_fields: list | None = None
     ) -> tuple:
         if required_fields is None:
@@ -322,7 +322,7 @@ class SchemaModelFactoryV2(SchemaModelFactory):
         )
 
     @classmethod
-    def dynamic_descriptor(cls, passed_in_types: list) -> type:
+    def dynamic_descriptor(cls, passed_in_types: list) -> type:  # noqa: C901
         T = TypeVar("T", *passed_in_types)
 
         class DynamicDescriptor(bases.SpecialKeywordDescriptor[T]):

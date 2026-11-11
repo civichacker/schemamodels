@@ -188,6 +188,8 @@ def validate_subschema(subschema: dict | bool, value: Any) -> bool:  # noqa: C90
 
 
 class JSONSchemaFieldDescriptor(Protocol[A]):
+    COMPARISONS: ClassVar[dict] = {}
+
     def __init__(self, *, default: Any = None, metadata: Any = None) -> None:
         self.__orig_bases__ = None
         self._default = default
@@ -232,7 +234,7 @@ class JSONSchemaFieldDescriptor(Protocol[A]):
         if self._not is not None and validate_subschema(self._not, value):
             raise e.SubSchemaFailureViolation("subschema failed")
 
-    def __set__(self, obj, value):
+    def __set__(self, obj, value):  # noqa: C901
         errors = (
             obj.__dict__.get("_validation_errors") if hasattr(obj, "__dict__") else None
         )
@@ -335,7 +337,7 @@ class ArrayDescriptor(JSONSchemaFieldDescriptor[C]):
         self._min_contains = self._metadata.get("minContains")
         self._max_contains = self._metadata.get("maxContains")
 
-    def __set__(self, obj, value):
+    def __set__(self, obj, value):  # noqa: C901
         errors = (
             obj.__dict__.get("_validation_errors") if hasattr(obj, "__dict__") else None
         )
@@ -401,6 +403,8 @@ class ArrayDescriptor(JSONSchemaFieldDescriptor[C]):
 
 
 class BooleanDescriptor(JSONSchemaFieldDescriptor[B]):
+    COMPARISONS: ClassVar[dict] = {}
+
     def __init__(self, *, default=None, metadata=None) -> None:
         super().__init__(default=default, metadata=metadata or {})
 
@@ -438,6 +442,8 @@ class BooleanDescriptor(JSONSchemaFieldDescriptor[B]):
 
 
 class ObjectDescriptor(JSONSchemaFieldDescriptor[O]):
+    COMPARISONS: ClassVar[dict] = {}
+
     def __init__(self, *, default=None, metadata=None) -> None:
         super().__init__(default=default, metadata=metadata or {})
 
@@ -475,6 +481,8 @@ class ObjectDescriptor(JSONSchemaFieldDescriptor[O]):
 
 
 class NullDescriptor(JSONSchemaFieldDescriptor[S]):
+    COMPARISONS: ClassVar[dict] = {}
+
     def __init__(self, *, default=None, metadata=None) -> None:
         super().__init__(default=default, metadata=metadata or {})
 
@@ -528,7 +536,7 @@ class CollectionDescriptor(JSONSchemaFieldDescriptor[C]):
         self._min_length = self._metadata.get("minLength")
         self._max_length = self._metadata.get("maxLength")
 
-    def __set__(self, obj, value):
+    def __set__(self, obj, value):  # noqa: C901
         errors = (
             obj.__dict__.get("_validation_errors") if hasattr(obj, "__dict__") else None
         )
@@ -597,7 +605,7 @@ class StringDescriptor(JSONSchemaFieldDescriptor[AnyStr]):
         self._max_length = self._metadata.get("maxLength")
         self._format = self._metadata.get("format")
 
-    def __set__(self, obj, value):
+    def __set__(self, obj, value):  # noqa: C901
         errors = (
             obj.__dict__.get("_validation_errors") if hasattr(obj, "__dict__") else None
         )
@@ -680,7 +688,7 @@ class IntegerDescriptor(JSONSchemaFieldDescriptor[int]):
         self._exclusive_maximum = self._metadata.get("exclusiveMaximum")
         self._multiple_of = self._metadata.get("multipleOf")
 
-    def __set__(self, obj, value):
+    def __set__(self, obj, value):  # noqa: C901
         errors = (
             obj.__dict__.get("_validation_errors") if hasattr(obj, "__dict__") else None
         )
@@ -775,7 +783,7 @@ class NumberDescriptor(JSONSchemaFieldDescriptor[N]):
         self._exclusive_maximum = self._metadata.get("exclusiveMaximum")
         self._multiple_of = self._metadata.get("multipleOf")
 
-    def __set__(self, obj, value):
+    def __set__(self, obj, value):  # noqa: C901
         errors = (
             obj.__dict__.get("_validation_errors") if hasattr(obj, "__dict__") else None
         )
@@ -839,6 +847,7 @@ class NumberDescriptor(JSONSchemaFieldDescriptor[N]):
 
 
 class SpecialKeywordDescriptor(JSONSchemaFieldDescriptor[A]):
+    COMPARISONS: ClassVar[dict] = {}
     MAP_TTYPE: ClassVar[dict] = {
         str: StringDescriptor,
         float: NumberDescriptor,
