@@ -84,7 +84,7 @@ The class-like syntax of creating dataclasses is a useful way to model a valid J
 
 ### Useable everywhere
 
-Taking the time to construct a plain ol' Pythjon dataclass, ensures widespread utility across of multiple domains of study and applications.
+Taking the time to construct a plain ol' Python dataclass, ensures widespread utility across of multiple domains of study and applications.
 
 ### Just-enough validation
 
@@ -176,4 +176,4 @@ The performance benchmark evaluates `SchemaModelFactory` (V1, based on functor d
 
 This codebase is licensed under the GPLv3+ and therefore the use, inclusion, modification, and distribution of this software is governed by the GPL.
 
-To opt-out of the obligations of the GPL, inquire about the commercial license by sending an email to: license AT civichacker.com.
+To inquire about the commercial license by sending an email to: license AT civichacker.com.
