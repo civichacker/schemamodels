@@ -119,10 +119,10 @@ Below is the current support status for the keywords defined in [Section 6 (A Vo
 | `uniqueItems` | 6.4.3 | Array Instances | ✅ |
 | `maxContains` | 6.4.4 | Array Instances | ✅ |
 | `minContains` | 6.4.5 | Array Instances | ✅ |
-| `maxProperties` | 6.5.1 | Object Instances | ❌ |
-| `minProperties` | 6.5.2 | Object Instances | ❌ |
+| `maxProperties` | 6.5.1 | Object Instances | ✅ |
+| `minProperties` | 6.5.2 | Object Instances | ✅ |
 | `required` | 6.5.3 | Object Instances | ✅ |
-| `dependentRequired` | 6.5.4 | Object Instances | ❌ |
+| `dependentRequired` | 6.5.4 | Object Instances | ✅ |
 
 ## JSON Schema 2020-12 String Format Support
 
