@@ -86,7 +86,7 @@ class DefaultErrorHandler(bases.BaseErrorHandler):
     }
 
     @classmethod
-    def apply(cls, instance: object) -> object:
+    def apply(cls, instance: object) -> object:  # noqa: C901
         errors = []
         for f in fs(instance):
             val = getattr(instance, f.name)
@@ -715,7 +715,7 @@ class SchemaModelFactoryV2(SchemaModelFactory):
 
         return fields, fields_with_defaults
 
-    def register(self, schema: dict) -> bool:
+    def register(self, schema: dict) -> bool:  # noqa: C901
         if not utils.is_schema_toplevel_object(schema):
             raise e.MalformedSchemaViolation()
 
