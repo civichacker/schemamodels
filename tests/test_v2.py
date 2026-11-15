@@ -1141,7 +1141,6 @@ def test_v2_exports_and_parity():
 
 @pytest.mark.v2
 @pytest.mark.descriptor
-@pytest.mark.skip
 def test_all_descriptors_comparisons():
     descriptor_classes = [
         v2.JSONSchemaFieldDescriptor,
@@ -1189,8 +1188,12 @@ def test_all_descriptors_comparisons():
         "minContains",
         "uniqueItems",
     }
+    assert set(v2.ObjectDescriptor.COMPARISONS.keys()) == {
+        "maxProperties",
+        "minProperties",
+        "dependentRequired",
+    }
     assert v2.BooleanDescriptor.COMPARISONS == {}
-    assert v2.ObjectDescriptor.COMPARISONS == {}
     assert v2.NullDescriptor.COMPARISONS == {}
     assert v2.SpecialKeywordDescriptor.COMPARISONS == {}
     assert v2.JSONSchemaFieldDescriptor.COMPARISONS == {}

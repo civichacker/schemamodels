@@ -171,6 +171,24 @@ def validate_subschema(subschema: dict | bool, value: Any) -> bool:  # noqa: C90
         return False
     if "const" in subschema and not _json_equal(value, subschema["const"]):
         return False
+    if (
+        "minProperties" in subschema
+        and isinstance(value, dict)
+        and not (len(value) >= subschema["minProperties"])
+    ):
+        return False
+    if (
+        "maxProperties" in subschema
+        and isinstance(value, dict)
+        and not (len(value) <= subschema["maxProperties"])
+    ):
+        return False
+    if "dependentRequired" in subschema and isinstance(value, dict):
+        dep_req = subschema["dependentRequired"]
+        if isinstance(dep_req, dict):
+            for prop, reqs in dep_req.items():
+                if prop in value and not all(req in value for req in reqs):
+                    return False
     if "not" in subschema and validate_subschema(subschema["not"], value):
         return False
     if "anyOf" in subschema and not any(
@@ -442,12 +460,35 @@ class BooleanDescriptor(JSONSchemaFieldDescriptor[B]):
 
 
 class ObjectDescriptor(JSONSchemaFieldDescriptor[O]):
-    COMPARISONS: ClassVar[dict] = {}
+    COMPARISONS: ClassVar[dict] = {
+        "maxProperties": {
+            "comparator": lambda d: partial(lambda bound, v: 0 <= len(v) <= bound, d),
+            "errorClass": e.ObjectPropertiesViolation,
+        },
+        "minProperties": {
+            "comparator": lambda d: partial(lambda bound, v: 0 <= bound <= len(v), d),
+            "errorClass": e.ObjectPropertiesViolation,
+        },
+        "dependentRequired": {
+            "comparator": lambda d: partial(
+                lambda dep_map, v: all(
+                    all(req in v for req in reqs)
+                    for prop, reqs in dep_map.items()
+                    if prop in v
+                ),
+                d,
+            ),
+            "errorClass": e.RequiredPropertyViolation,
+        },
+    }
 
     def __init__(self, *, default=None, metadata=None) -> None:
         super().__init__(default=default, metadata=metadata or {})
+        self._min_properties = self._metadata.get("minProperties")
+        self._max_properties = self._metadata.get("maxProperties")
+        self._dependent_required = self._metadata.get("dependentRequired")
 
-    def __set__(self, obj, value):
+    def __set__(self, obj, value):  # noqa: C901
         errors = (
             obj.__dict__.get("_validation_errors") if hasattr(obj, "__dict__") else None
         )
@@ -458,6 +499,26 @@ class ObjectDescriptor(JSONSchemaFieldDescriptor[O]):
                 )
             if not isinstance(value, dict):
                 raise e.ValueTypeViolation(f"{self._name} expected object")
+            if self._min_properties is not None and not self.COMPARISONS[
+                "minProperties"
+            ]["comparator"](self._min_properties)(value):
+                raise self.COMPARISONS["minProperties"]["errorClass"](
+                    f"{self._name}={value} =/= minProperties={self._min_properties} constraint fails"
+                )
+            if self._max_properties is not None and not self.COMPARISONS[
+                "maxProperties"
+            ]["comparator"](self._max_properties)(value):
+                raise self.COMPARISONS["maxProperties"]["errorClass"](
+                    f"{self._name}={value} =/= maxProperties={self._max_properties} constraint fails"
+                )
+            if self._dependent_required is not None:
+                for prop, reqs in self._dependent_required.items():
+                    if prop in value:
+                        for req in reqs:
+                            if req not in value:
+                                raise self.COMPARISONS["dependentRequired"][
+                                    "errorClass"
+                                ](f"{req} is a required property dependent on {prop}")
             if self._enum is not None and value not in self._enum:
                 raise e.ValueTypeViolation(
                     f"{self._name}={value} =/= enum={self._raw_enum} constraint fails"

@@ -110,6 +110,26 @@ COMPARISONS = {
     ),
     "minContains": lambda d: lambda v: True,
     "maxContains": lambda d: lambda v: True,
+    "maxProperties": lambda d: partial(
+        lambda bound, v: 0 <= len(v) <= bound if isinstance(v, dict) else True,
+        d,
+    ),
+    "minProperties": lambda d: partial(
+        lambda bound, v: 0 <= bound <= len(v) if isinstance(v, dict) else True,
+        d,
+    ),
+    "dependentRequired": lambda d: partial(
+        lambda dep_map, v: (
+            all(
+                all(req in v for req in reqs)
+                for prop, reqs in dep_map.items()
+                if prop in v
+            )
+            if isinstance(v, dict)
+            else True
+        ),
+        d,
+    ),
 }
 
 STRING_FORMATS = {

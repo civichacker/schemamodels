@@ -107,6 +107,24 @@ def validate_subschema(subschema: dict | bool, value: Any) -> bool:  # noqa: C90
         return False
     if "const" in subschema and not _json_equal(value, subschema["const"]):
         return False
+    if (
+        "minProperties" in subschema
+        and isinstance(value, dict)
+        and not (len(value) >= subschema["minProperties"])
+    ):
+        return False
+    if (
+        "maxProperties" in subschema
+        and isinstance(value, dict)
+        and not (len(value) <= subschema["maxProperties"])
+    ):
+        return False
+    if "dependentRequired" in subschema and isinstance(value, dict):
+        dep_req = subschema["dependentRequired"]
+        if isinstance(dep_req, dict):
+            for prop, reqs in dep_req.items():
+                if prop in value and not all(req in value for req in reqs):
+                    return False
     if "not" in subschema and validate_subschema(subschema["not"], value):
         return False
     if "anyOf" in subschema and not any(
