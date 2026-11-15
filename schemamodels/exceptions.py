@@ -44,3 +44,7 @@ class ArrayLengthViolation(SchemaViolation):
 
 class ArrayUniqueElementViolation(SchemaViolation):
     pass
+
+
+class ObjectPropertiesViolation(SchemaViolation):
+    pass

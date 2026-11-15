@@ -41,6 +41,9 @@ __all__ = [
 ]
 
 
+_V1_PROVIDED_MAP: dict[int, set] = {}
+
+
 class DefaultErrorHandler(bases.BaseErrorHandler):
     ERROR_MAP: ClassVar[dict] = {
         "not": (e.SubSchemaFailureViolation, "subschema failed"),
@@ -68,6 +71,18 @@ class DefaultErrorHandler(bases.BaseErrorHandler):
         "contains": (e.ArrayElementViolation, "violates array element constraint"),
         "minContains": (e.ArrayElementViolation, "violates array element constraint"),
         "maxContains": (e.ArrayElementViolation, "violates array element constraint"),
+        "maxProperties": (
+            e.ObjectPropertiesViolation,
+            "violates object properties constraint",
+        ),
+        "minProperties": (
+            e.ObjectPropertiesViolation,
+            "violates object properties constraint",
+        ),
+        "dependentRequired": (
+            e.RequiredPropertyViolation,
+            "violates dependent required property constraint",
+        ),
     }
 
     @classmethod
@@ -97,6 +112,48 @@ class DefaultErrorHandler(bases.BaseErrorHandler):
                 if not valid and k in cls.ERROR_MAP:
                     err_cls, msg = cls.ERROR_MAP[k]
                     errors.append(err_cls(msg))
+
+        provided = _V1_PROVIDED_MAP.get(id(instance), None)
+        if provided is None:
+            provided = {
+                f.name
+                for f in fs(instance)
+                if getattr(instance, f.name) is not REQUIRED_MISSING
+            }
+
+        schema = getattr(instance, "_schema", {})
+        if "dependentRequired" in schema:
+            for prop, reqs in schema["dependentRequired"].items():
+                if prop in provided:
+                    for req in reqs:
+                        if (
+                            req not in provided
+                            or getattr(instance, req, REQUIRED_MISSING)
+                            is REQUIRED_MISSING
+                        ):
+                            errors.append(
+                                e.RequiredPropertyViolation(
+                                    f"{req} is a required property dependent on {prop}"
+                                )
+                            )
+
+        if "minProperties" in schema:
+            min_props = schema["minProperties"]
+            if len(provided) < min_props:
+                errors.append(
+                    e.ObjectPropertiesViolation(
+                        f"violates minProperties constraint: expected at least {min_props} properties, got {len(provided)}"
+                    )
+                )
+
+        if "maxProperties" in schema:
+            max_props = schema["maxProperties"]
+            if len(provided) > max_props:
+                errors.append(
+                    e.ObjectPropertiesViolation(
+                        f"violates maxProperties constraint: expected at most {max_props} properties, got {len(provided)}"
+                    )
+                )
 
         if len(errors) == 1:
             raise errors[0]
@@ -182,24 +239,60 @@ class SchemaModelFactory:
     def construct_dataclass(
         self, klassname: str, schema: dict, fields: deque, fields_with_defaults: deque
     ) -> Callable:
-        return partial(
-            make_dataclass,
-            klassname,
-            fields + fields_with_defaults,
-            frozen=True,
-            namespace={
-                "_errorhandler": self.error_handler.apply,
-                "_renderer": self.renderer.apply,
-                "tocsv": lambda self, header=False, fields=schema["properties"].keys(): (  # noqa: B008
-                    f"{','.join(fields)}\n{','.join(asdict(self)[i] for i in fields)}"
-                    if header
-                    else ",".join(asdict(self)[i] for i in fields)
-                ),
-                "tolist": lambda self: list(asdict(self).values()),
-                "todict": lambda self: asdict(self),
-                "__post_init__": lambda self: self._errorhandler(self)._renderer(self),
-            },
-        )
+        prop_keys = list(schema.get("properties", {}).keys())
+
+        def _make_dc(*args, **kwargs):
+            dklass = make_dataclass(
+                klassname,
+                fields + fields_with_defaults,
+                frozen=True,
+                namespace={
+                    "_errorhandler": self.error_handler.apply,
+                    "_renderer": self.renderer.apply,
+                    "_schema": schema,
+                    "tocsv": lambda self, header=False, fields=schema["properties"].keys(): (  # noqa: B008
+                        f"{','.join(fields)}\n{','.join(asdict(self)[i] for i in fields)}"
+                        if header
+                        else ",".join(asdict(self)[i] for i in fields)
+                    ),
+                    "tolist": lambda self: list(asdict(self).values()),
+                    "todict": lambda self: asdict(self),
+                    "__post_init__": lambda self: self._errorhandler(self)._renderer(
+                        self
+                    ),
+                },
+                *args,
+                **kwargs,
+            )
+            orig_init = dklass.__init__
+
+            def wrapped_init(self, *iargs, **ikwargs):
+                provided = set()
+                for i in range(min(len(iargs), len(prop_keys))):
+                    provided.add(prop_keys[i])
+                for k, v in ikwargs.items():
+                    if v is not REQUIRED_MISSING:
+                        provided.add(k)
+                for k, v in schema.get("properties", {}).items():
+                    if (
+                        "default" in v
+                        and k not in ikwargs
+                        and (
+                            len(iargs) <= prop_keys.index(k) if k in prop_keys else True
+                        )
+                    ):
+                        provided.add(k)
+                inst_id = id(self)
+                _V1_PROVIDED_MAP[inst_id] = provided
+                try:
+                    orig_init(self, *iargs, **ikwargs)
+                finally:
+                    _V1_PROVIDED_MAP.pop(inst_id, None)
+
+            dklass.__init__ = wrapped_init
+            return dklass
+
+        return _make_dc
 
     def process_subschema(self, subschema: str, values: dict) -> dict:
         funcs = [generate_functors(s) for s in values[subschema]]
@@ -241,9 +334,12 @@ class SchemaModelFactory:
             if v.get("type", None) and v.get("type") != "object":
                 entry += (JSON_TYPE_MAP.get(v.get("type")),)
                 field_spec.update(default_factory=DEFAULT_FACTORIES[v.get("type")])
-            elif v.get("type") == "object":
+            elif v.get("type") == "object" and v.get("properties"):
                 fs, _ = self.process_object(v.get("properties"))
                 entry += (k, fs)
+                field_spec.update(default_factory=DEFAULT_FACTORIES[v.get("type")])
+            elif v.get("type") == "object":
+                entry += (JSON_TYPE_MAP.get("object"),)
                 field_spec.update(default_factory=DEFAULT_FACTORIES[v.get("type")])
             else:
                 print("not a built-in")
@@ -285,6 +381,40 @@ class SchemaModelFactory:
             required_fields = schema.get("required", [])
         else:
             required_fields = list(schema.get("properties", {}).keys())
+
+        if "minProperties" in schema:
+            min_props = schema["minProperties"]
+            if (
+                not isinstance(min_props, int)
+                or isinstance(min_props, bool)
+                or min_props < 0
+            ):
+                raise e.MalformedSchemaViolation(
+                    "minProperties keyword must be a non-negative integer"
+                )
+
+        if "maxProperties" in schema:
+            max_props = schema["maxProperties"]
+            if (
+                not isinstance(max_props, int)
+                or isinstance(max_props, bool)
+                or max_props < 0
+            ):
+                raise e.MalformedSchemaViolation(
+                    "maxProperties keyword must be a non-negative integer"
+                )
+
+        if "dependentRequired" in schema:
+            dep_req = schema["dependentRequired"]
+            if not isinstance(dep_req, dict) or not all(
+                isinstance(v, list)
+                and all(isinstance(x, str) for x in v)
+                and len(v) == len(set(v))
+                for v in dep_req.values()
+            ):
+                raise e.MalformedSchemaViolation(
+                    "dependentRequired keyword must be an object with unique string array values"
+                )
 
         klassname = utils.generate_classname(schema.get("title"))
 
@@ -429,6 +559,9 @@ class SchemaModelFactoryV2(SchemaModelFactory):
                     "contains",
                     "minContains",
                     "maxContains",
+                    "minProperties",
+                    "maxProperties",
+                    "dependentRequired",
                 ):
                     if guard in v:
                         field_meta[guard] = v[guard]
@@ -460,6 +593,9 @@ class SchemaModelFactoryV2(SchemaModelFactory):
                     "contains",
                     "minContains",
                     "maxContains",
+                    "minProperties",
+                    "maxProperties",
+                    "dependentRequired",
                 ):
                     if guard in v:
                         field_meta[guard] = v[guard]
@@ -491,6 +627,9 @@ class SchemaModelFactoryV2(SchemaModelFactory):
                     "contains",
                     "minContains",
                     "maxContains",
+                    "minProperties",
+                    "maxProperties",
+                    "dependentRequired",
                 ):
                     if guard in v:
                         field_meta[guard] = v[guard]
@@ -516,6 +655,9 @@ class SchemaModelFactoryV2(SchemaModelFactory):
                     "contains",
                     "minContains",
                     "maxContains",
+                    "minProperties",
+                    "maxProperties",
+                    "dependentRequired",
                 ):
                     if guard in v:
                         field_meta[guard] = v[guard]
@@ -543,6 +685,9 @@ class SchemaModelFactoryV2(SchemaModelFactory):
                     "contains",
                     "minContains",
                     "maxContains",
+                    "minProperties",
+                    "maxProperties",
+                    "dependentRequired",
                 ):
                     if guard in v:
                         field_meta[guard] = v[guard]
@@ -587,6 +732,40 @@ class SchemaModelFactoryV2(SchemaModelFactory):
             required_fields = schema.get("required", [])
         else:
             required_fields = list(schema.get("properties", {}).keys())
+
+        if "minProperties" in schema:
+            min_props = schema["minProperties"]
+            if (
+                not isinstance(min_props, int)
+                or isinstance(min_props, bool)
+                or min_props < 0
+            ):
+                raise e.MalformedSchemaViolation(
+                    "minProperties keyword must be a non-negative integer"
+                )
+
+        if "maxProperties" in schema:
+            max_props = schema["maxProperties"]
+            if (
+                not isinstance(max_props, int)
+                or isinstance(max_props, bool)
+                or max_props < 0
+            ):
+                raise e.MalformedSchemaViolation(
+                    "maxProperties keyword must be a non-negative integer"
+                )
+
+        if "dependentRequired" in schema:
+            dep_req = schema["dependentRequired"]
+            if not isinstance(dep_req, dict) or not all(
+                isinstance(v, list)
+                and all(isinstance(x, str) for x in v)
+                and len(v) == len(set(v))
+                for v in dep_req.values()
+            ):
+                raise e.MalformedSchemaViolation(
+                    "dependentRequired keyword must be an object with unique string array values"
+                )
 
         klassname = utils.generate_classname(schema.get("title"))
 
@@ -636,7 +815,55 @@ class SchemaModelFactoryV2(SchemaModelFactory):
 
         def wrapped_init(self, *args, **kwargs):
             self.__dict__["_validation_errors"] = []
+            provided = set()
+            for i in range(min(len(args), len(prop_keys))):
+                provided.add(prop_keys[i])
+            for k, v in kwargs.items():
+                if v is not REQUIRED_MISSING:
+                    provided.add(k)
+            for k, v in schema.get("properties", {}).items():
+                if (
+                    "default" in v
+                    and k not in kwargs
+                    and (len(args) <= prop_keys.index(k) if k in prop_keys else True)
+                ):
+                    provided.add(k)
+
             orig_init(self, *args, **kwargs)
+
+            if "dependentRequired" in schema:
+                for prop, reqs in schema["dependentRequired"].items():
+                    if prop in provided:
+                        for req in reqs:
+                            if (
+                                req not in provided
+                                or getattr(self, req, REQUIRED_MISSING)
+                                is REQUIRED_MISSING
+                            ):
+                                self.__dict__["_validation_errors"].append(
+                                    e.RequiredPropertyViolation(
+                                        f"{req} is a required property dependent on {prop}"
+                                    )
+                                )
+
+            if "minProperties" in schema:
+                min_props = schema["minProperties"]
+                if len(provided) < min_props:
+                    self.__dict__["_validation_errors"].append(
+                        e.ObjectPropertiesViolation(
+                            f"violates minProperties constraint: expected at least {min_props} properties, got {len(provided)}"
+                        )
+                    )
+
+            if "maxProperties" in schema:
+                max_props = schema["maxProperties"]
+                if len(provided) > max_props:
+                    self.__dict__["_validation_errors"].append(
+                        e.ObjectPropertiesViolation(
+                            f"violates maxProperties constraint: expected at most {max_props} properties, got {len(provided)}"
+                        )
+                    )
+
             errors = self.__dict__.pop("_validation_errors", [])
             if not errors:
                 return
